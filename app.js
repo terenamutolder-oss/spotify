@@ -67,6 +67,60 @@ const SONGS = [
         color: "#a855f7",
         color2: "#581c87",
     },
+    {
+        id: "dont-stop",
+        title: "Don't Stop 'Til You Get Enough",
+        artist: "Michael Jackson",
+        album: "Off the Wall",
+        src: "songs/dont-stop.mp3",
+        color: "#eab308",
+        color2: "#713f12",
+    },
+    {
+        id: "speed",
+        title: "Speed",
+        artist: "Unknown Artist",
+        album: "Singles",
+        src: "songs/speed.mp3",
+        color: "#22c55e",
+        color2: "#14532d",
+    },
+    {
+        id: "minecraft-calm-1",
+        title: "Minecraft — Calm 1",
+        artist: "C418",
+        album: "Minecraft Volume Alpha",
+        src: "songs/minecraft-calm-1.mp3",
+        color: "#84cc16",
+        color2: "#365314",
+    },
+    {
+        id: "minecraft-calm-2",
+        title: "Minecraft — Calm 2",
+        artist: "C418",
+        album: "Minecraft Volume Alpha",
+        src: "songs/minecraft-calm-2.mp3",
+        color: "#65a30d",
+        color2: "#3f6212",
+    },
+    {
+        id: "minecraft-calm-3",
+        title: "Minecraft — Calm 3",
+        artist: "C418",
+        album: "Minecraft Volume Alpha",
+        src: "songs/minecraft-calm-3.mp3",
+        color: "#4d7c0f",
+        color2: "#1a2e05",
+    },
+    {
+        id: "minecraft-cat",
+        title: "Minecraft — Cat",
+        artist: "C418",
+        album: "Minecraft Volume Alpha",
+        src: "songs/minecraft-cat.mp3",
+        color: "#14b8a6",
+        color2: "#134e4a",
+    },
 ];
 
 const PLAYLISTS = [
@@ -88,7 +142,17 @@ const PLAYLISTS = [
         owner: "Spotifly",
         color: "#7c3aed",
         color2: "#1e1b4b",
-        songIds: ["thriller", "beat-it", "billie-jean", "smooth-criminal"],
+        songIds: ["thriller", "beat-it", "billie-jean", "smooth-criminal", "dont-stop"],
+    },
+    {
+        id: "minecraft-chill",
+        name: "Minecraft Chill",
+        description: "Calm tracks from the Overworld.",
+        type: "playlist",
+        owner: "Spotifly",
+        color: "#84cc16",
+        color2: "#365314",
+        songIds: ["minecraft-calm-1", "minecraft-calm-2", "minecraft-calm-3", "minecraft-cat"],
     },
     {
         id: "top-hits",
@@ -98,7 +162,7 @@ const PLAYLISTS = [
         owner: "Spotifly",
         color: "#ef4444",
         color2: "#7f1d1d",
-        songIds: ["nochentera", "azizam", "shape-of-you", "billie-jean", "thriller"],
+        songIds: ["speed", "dont-stop", "nochentera", "azizam", "shape-of-you", "billie-jean", "thriller"],
     },
     {
         id: "chill-mix",
@@ -108,7 +172,7 @@ const PLAYLISTS = [
         owner: "Spotifly",
         color: "#06b6d4",
         color2: "#164e63",
-        songIds: ["azizam", "shape-of-you", "billie-jean"],
+        songIds: ["minecraft-calm-1", "minecraft-calm-2", "minecraft-calm-3", "azizam", "shape-of-you", "billie-jean"],
     },
     {
         id: "discover",
@@ -166,6 +230,9 @@ const getGreeting = () => {
     return "Good evening";
 };
 
+/** Resolve song paths correctly on GitHub Pages (/spotify/) and locally. */
+const resolveSrc = (path) => new URL(path, window.location.href).href;
+
 // ====================================================
 // State
 // ====================================================
@@ -183,8 +250,14 @@ const state = {
     currentPlaylistId: null,
 };
 
-const audio = $("#audio");
-audio.volume = state.volume;
+let audio;
+let audioReadyHandler = null;
+let audioErrorHandler = null;
+
+function getAudio() {
+    if (!audio) audio = $("#audio");
+    return audio;
+}
 
 // ====================================================
 // RENDERING
@@ -224,7 +297,7 @@ function renderHome() {
         card.innerHTML = `
             <div class="qc-art" style="background:${gradient(pl.color, pl.color2)}">${initials(pl.name)}</div>
             <div class="qc-title">${pl.name}</div>
-            <button class="qc-play" title="Play ${pl.name}">
+            <button type="button" class="qc-play" title="Play ${pl.name}">
                 <svg viewBox="0 0 16 16" width="22" height="22" fill="#000"><path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"/></svg>
             </button>
         `;
@@ -257,7 +330,7 @@ function buildPlaylistCard(pl) {
     card.innerHTML = `
         <div class="card-art" style="background:${gradient(pl.color, pl.color2)}">
             ${initials(pl.name)}
-            <button class="card-play" title="Play">
+            <button type="button" class="card-play" title="Play">
                 <svg viewBox="0 0 16 16" width="22" height="22" fill="#000"><path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"/></svg>
             </button>
         </div>
@@ -278,7 +351,7 @@ function buildSongCard(song) {
     card.innerHTML = `
         <div class="card-art" style="background:${gradient(song.color, song.color2)}">
             ${initials(song.title)}
-            <button class="card-play" title="Play ${song.title}">
+            <button type="button" class="card-play" title="Play ${song.title}">
                 <svg viewBox="0 0 16 16" width="22" height="22" fill="#000"><path d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"/></svg>
             </button>
         </div>
@@ -480,39 +553,119 @@ function playSongFromList(songId, sourceIds, sourceId) {
     loadAndPlayCurrent();
 }
 
+function showPlaybackError(message) {
+    const toast = $("#playback-toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.remove("hidden");
+}
+
+function hidePlaybackError() {
+    $("#playback-toast")?.classList.add("hidden");
+}
+
+function audioErrorMessage(song) {
+    if (window.location.protocol === "file:") {
+        return "Open via the local server: run start.cmd, then go to http://localhost:5500/";
+    }
+    if (window.location.hostname.includes("github.io") || window.location.hostname.includes("vercel.app")) {
+        return `“${song.title}” could not be loaded. Try refreshing — if it persists, redeploy with the songs/ folder included.`;
+    }
+    return `Could not load “${song.title}”. Make sure the server is running (start.cmd) and songs/ has the MP3 files.`;
+}
+
+function clearAudioHandlers() {
+    const el = getAudio();
+    if (audioReadyHandler) {
+        el.removeEventListener("canplay", audioReadyHandler);
+        audioReadyHandler = null;
+    }
+    if (audioErrorHandler) {
+        el.removeEventListener("error", audioErrorHandler);
+        audioErrorHandler = null;
+    }
+}
+
+function startPlayback() {
+    const el = getAudio();
+    return el.play().then(() => {
+        state.isPlaying = true;
+        hidePlaybackError();
+        updatePlayPauseIcon();
+        updatePlayingHighlights();
+    }).catch((err) => {
+        state.isPlaying = false;
+        updatePlayPauseIcon();
+        if (err?.name !== "AbortError") {
+            const song = songById(state.queue[state.currentIndex]);
+            showPlaybackError(
+                song
+                    ? `Playback blocked or failed for “${song.title}”. Click play again.`
+                    : "Playback failed. Click play again."
+            );
+        }
+    });
+}
+
 function loadAndPlayCurrent() {
     const songId = state.queue[state.currentIndex];
     const song = songById(songId);
     if (!song) return;
 
-    audio.src = song.src;
-    audio.play().catch(() => {});
-    state.isPlaying = true;
+    const el = getAudio();
+    const src = resolveSrc(song.src);
+
     updateNowPlayingUI();
-    updatePlayingHighlights();
+    clearAudioHandlers();
+
+    const onReady = () => {
+        clearAudioHandlers();
+        startPlayback();
+    };
+
+    const onFail = () => {
+        clearAudioHandlers();
+        state.isPlaying = false;
+        updatePlayPauseIcon();
+        showPlaybackError(audioErrorMessage(song));
+    };
+
+    audioReadyHandler = onReady;
+    audioErrorHandler = onFail;
+
+    if (el.dataset.loadedSrc === src && el.readyState >= 2) {
+        startPlayback();
+        return;
+    }
+
+    el.dataset.loadedSrc = src;
+    el.src = src;
+    el.load();
+    el.addEventListener("canplay", onReady);
+    el.addEventListener("error", onFail);
 }
 
 function togglePlay() {
     if (state.currentIndex < 0) {
-        // Nothing loaded - start with first playlist
         playPlaylist("all");
         return;
     }
-    if (audio.paused) {
-        audio.play().catch(() => {});
-        state.isPlaying = true;
+    const el = getAudio();
+    if (el.paused) {
+        startPlayback();
     } else {
-        audio.pause();
+        el.pause();
         state.isPlaying = false;
+        updatePlayPauseIcon();
     }
-    updatePlayPauseIcon();
 }
 
 function nextSong() {
     if (!state.queue.length) return;
     if (state.repeatMode === 2) {
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
+        const el = getAudio();
+        el.currentTime = 0;
+        startPlayback();
         return;
     }
     let next = state.currentIndex + 1;
@@ -520,7 +673,7 @@ function nextSong() {
         if (state.repeatMode === 1) {
             next = 0;
         } else {
-            audio.pause();
+            getAudio().pause();
             state.isPlaying = false;
             updatePlayPauseIcon();
             return;
@@ -532,8 +685,9 @@ function nextSong() {
 
 function prevSong() {
     if (!state.queue.length) return;
-    if (audio.currentTime > 3) {
-        audio.currentTime = 0;
+    const el = getAudio();
+    if (el.currentTime > 3) {
+        el.currentTime = 0;
         return;
     }
     let prev = state.currentIndex - 1;
@@ -586,7 +740,8 @@ function updateNowPlayingUI() {
 
 function updatePlayPauseIcon() {
     const icon = $("#play-icon");
-    if (state.isPlaying && !audio.paused) {
+    const el = getAudio();
+    if (state.isPlaying && el && !el.paused) {
         icon.innerHTML = '<path d="M2.7 1a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7H2.7zm8 0a.7.7 0 0 0-.7.7v12.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-2.6z"/>';
         $("#play-btn").title = "Pause";
     } else {
@@ -604,8 +759,9 @@ function updatePlayingHighlights() {
 }
 
 function updateProgressUI() {
-    const cur = audio.currentTime || 0;
-    const dur = audio.duration || 0;
+    const el = getAudio();
+    const cur = el?.currentTime || 0;
+    const dur = el?.duration || 0;
     $("#current-time").textContent = formatTime(cur);
     $("#duration").textContent = formatTime(dur);
     const pct = dur ? (cur / dur) * 100 : 0;
@@ -652,13 +808,36 @@ function bindScrub(barEl, fillEl, thumbEl, onSeek) {
     });
 }
 
+async function checkLibraryAvailable() {
+    const song = SONGS[0];
+    if (!song) return;
+    try {
+        const res = await fetch(resolveSrc(song.src), { method: "HEAD" });
+        if (!res.ok) {
+            showPlaybackError(audioErrorMessage(song));
+        }
+    } catch {
+        if (window.location.protocol === "file:") {
+            showPlaybackError("Open via the local server: run start.cmd, then go to http://localhost:5500/");
+        }
+    }
+}
+
 // ====================================================
 // INIT
 // ====================================================
 function init() {
+    audio = $("#audio");
+    if (!audio) {
+        console.error("Audio element not found");
+        return;
+    }
+    audio.volume = state.volume;
+
     renderLibrary();
     renderHome();
     renderBrowse();
+    checkLibraryAvailable();
 
     // ----- Top nav -----
     $$(".nav-item").forEach((n) => {
@@ -701,7 +880,10 @@ function init() {
     audio.addEventListener("timeupdate", updateProgressUI);
     audio.addEventListener("loadedmetadata", updateProgressUI);
     audio.addEventListener("ended", nextSong);
-    audio.addEventListener("error", () => console.warn("Audio error:", audio.error));
+    audio.addEventListener("error", () => {
+        const song = songById(state.queue[state.currentIndex]);
+        if (song) showPlaybackError(audioErrorMessage(song));
+    });
 
     // ----- Scrubbing -----
     bindScrub(
@@ -709,8 +891,9 @@ function init() {
         $("#progress-fill"),
         $("#progress-thumb"),
         (v, commit) => {
-            if (!audio.duration) return;
-            if (commit) audio.currentTime = v * audio.duration;
+            const el = getAudio();
+            if (!el.duration) return;
+            if (commit) el.currentTime = v * el.duration;
         }
     );
 
@@ -720,8 +903,9 @@ function init() {
         $("#volume-thumb"),
         (v) => {
             state.volume = v;
-            audio.volume = v;
-            audio.muted = false;
+            const el = getAudio();
+            el.volume = v;
+            el.muted = false;
         }
     );
 
@@ -730,9 +914,10 @@ function init() {
     $("#volume-thumb").style.left = `${state.volume * 100}%`;
 
     $("#volume-btn").addEventListener("click", () => {
-        audio.muted = !audio.muted;
-        $("#volume-fill").style.width = audio.muted ? "0%" : `${state.volume * 100}%`;
-        $("#volume-thumb").style.left = audio.muted ? "0%" : `${state.volume * 100}%`;
+        const el = getAudio();
+        el.muted = !el.muted;
+        $("#volume-fill").style.width = el.muted ? "0%" : `${state.volume * 100}%`;
+        $("#volume-thumb").style.left = el.muted ? "0%" : `${state.volume * 100}%`;
     });
 
     // ----- Keyboard shortcuts -----
@@ -744,13 +929,13 @@ function init() {
         else if (e.code === "ArrowUp") {
             e.preventDefault();
             state.volume = Math.min(1, state.volume + 0.05);
-            audio.volume = state.volume;
+            getAudio().volume = state.volume;
             $("#volume-fill").style.width = `${state.volume * 100}%`;
             $("#volume-thumb").style.left = `${state.volume * 100}%`;
         } else if (e.code === "ArrowDown") {
             e.preventDefault();
             state.volume = Math.max(0, state.volume - 0.05);
-            audio.volume = state.volume;
+            getAudio().volume = state.volume;
             $("#volume-fill").style.width = `${state.volume * 100}%`;
             $("#volume-thumb").style.left = `${state.volume * 100}%`;
         }

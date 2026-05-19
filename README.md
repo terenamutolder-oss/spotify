@@ -14,13 +14,12 @@ A Spotify-inspired web music player, built with plain HTML, CSS and JavaScript. 
 - Keyboard shortcuts: `Space` (play/pause), `Shift+→` / `Shift+←` (next/prev), `↑` / `↓` (volume)
 - Responsive layout
 
-## Live demo (GitHub Pages)
+## Live demo
 
-After pushing to GitHub, the site is published at:
+- **Vercel:** https://spotify-kappa-jade.vercel.app/
+- **GitHub Pages:** https://terenamutolder-oss.github.io/spotify/
 
-**https://terenamutolder-oss.github.io/spotify/**
-
-> GitHub Pages serves the static UI only. Add your own MP3s in `songs/` for playback (see below).
+Both deploy from this repo and include the `songs/` MP3 files for playback.
 
 ## Run locally
 

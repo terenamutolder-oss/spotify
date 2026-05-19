@@ -582,11 +582,22 @@ ul {
     transform: translateY(10px);
     transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s ease;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    z-index: 2;
+    cursor: pointer;
 }
 
-.card:hover .card-play {
+.card:hover .card-play,
+.card:focus-within .card-play {
     opacity: 1;
     transform: translateY(0);
+}
+
+@media (hover: none) {
+    .card-play,
+    .quick-card .qc-play {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .card-play:hover {
@@ -1098,6 +1109,28 @@ ul {
     .topbar-search {
         width: 240px;
     }
+}
+
+.playback-toast {
+    position: fixed;
+    bottom: calc(var(--player-height) + 16px);
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 12px 20px;
+    background: #f59e0b;
+    color: #000;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    z-index: 9999;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.playback-toast.hidden {
+    display: none;
 }
 
 @media (max-width: 800px) {
