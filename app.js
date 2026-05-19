@@ -49,6 +49,24 @@ const SONGS = [
         color: "#ec4899",
         color2: "#831843",
     },
+    {
+        id: "azizam",
+        title: "Azizam",
+        artist: "Ed Sheeran",
+        album: "Azizam",
+        src: "songs/azizam.mp3",
+        color: "#f97316",
+        color2: "#7c2d12",
+    },
+    {
+        id: "nochentera",
+        title: "Nochentera (Larry DJ Private Mix)",
+        artist: "Vicco & Larry DJ",
+        album: "Private Mix",
+        src: "songs/nochentera.mp3",
+        color: "#a855f7",
+        color2: "#581c87",
+    },
 ];
 
 const PLAYLISTS = [
@@ -80,7 +98,7 @@ const PLAYLISTS = [
         owner: "Spotifly",
         color: "#ef4444",
         color2: "#7f1d1d",
-        songIds: ["shape-of-you", "billie-jean", "thriller"],
+        songIds: ["nochentera", "azizam", "shape-of-you", "billie-jean", "thriller"],
     },
     {
         id: "chill-mix",
@@ -90,7 +108,7 @@ const PLAYLISTS = [
         owner: "Spotifly",
         color: "#06b6d4",
         color2: "#164e63",
-        songIds: ["shape-of-you", "billie-jean"],
+        songIds: ["azizam", "shape-of-you", "billie-jean"],
     },
     {
         id: "discover",
@@ -100,7 +118,7 @@ const PLAYLISTS = [
         owner: "Spotifly",
         color: "#f59e0b",
         color2: "#78350f",
-        songIds: ["smooth-criminal", "beat-it", "shape-of-you"],
+        songIds: ["nochentera", "azizam", "smooth-criminal", "beat-it", "shape-of-you"],
     },
 ];
 
