@@ -17,3 +17,4 @@ All tracks used by Spotifly (filenames must match `app.js`):
 | `minecraft-calm-2.mp3` | Minecraft — Calm 2 |
 | `minecraft-calm-3.mp3` | Minecraft — Calm 3 |
 | `minecraft-cat.mp3` | Minecraft — Cat |
+| `ocean-waves.mp3` | Soothing Ocean Waves — Dragon Studio |

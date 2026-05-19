@@ -121,6 +121,15 @@ const SONGS = [
         color: "#14b8a6",
         color2: "#134e4a",
     },
+    {
+        id: "ocean-waves",
+        title: "Soothing Ocean Waves",
+        artist: "Dragon Studio",
+        album: "Nature Sounds",
+        src: "songs/ocean-waves.mp3",
+        color: "#0ea5e9",
+        color2: "#0c4a6e",
+    },
 ];
 
 const PLAYLISTS = [
@@ -172,7 +181,7 @@ const PLAYLISTS = [
         owner: "Spotifly",
         color: "#06b6d4",
         color2: "#164e63",
-        songIds: ["minecraft-calm-1", "minecraft-calm-2", "minecraft-calm-3", "azizam", "shape-of-you", "billie-jean"],
+        songIds: ["ocean-waves", "minecraft-calm-1", "minecraft-calm-2", "minecraft-calm-3", "azizam", "shape-of-you", "billie-jean"],
     },
     {
         id: "discover",
