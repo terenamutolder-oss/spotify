@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+
+# Add your own MP3s locally (not committed — licensing/size)
+songs/*.mp3
