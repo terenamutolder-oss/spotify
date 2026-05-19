@@ -1,5 +1,5 @@
 /* ============================================================
-   Spotifly — a Spotify-inspired web player (vanilla JS)
+   Musicfly — a Spotify-inspired web player (vanilla JS)
    ============================================================ */
 
 // ----- Song & playlist data -----
@@ -138,7 +138,7 @@ const PLAYLISTS = [
         name: "All Songs",
         description: "Every track in your library.",
         type: "playlist",
-        owner: "Spotifly",
+        owner: "Musicfly",
         color: "#1DB954",
         color2: "#064e3b",
         songIds: SONGS.map((s) => s.id),
@@ -148,7 +148,7 @@ const PLAYLISTS = [
         name: "Michael Jackson Essentials",
         description: "The King of Pop's biggest hits.",
         type: "playlist",
-        owner: "Spotifly",
+        owner: "Musicfly",
         color: "#7c3aed",
         color2: "#1e1b4b",
         songIds: ["thriller", "beat-it", "billie-jean", "smooth-criminal", "dont-stop"],
@@ -158,7 +158,7 @@ const PLAYLISTS = [
         name: "Minecraft Chill",
         description: "Calm tracks from the Overworld.",
         type: "playlist",
-        owner: "Spotifly",
+        owner: "Musicfly",
         color: "#84cc16",
         color2: "#365314",
         songIds: ["minecraft-calm-1", "minecraft-calm-2", "minecraft-calm-3", "minecraft-cat"],
@@ -168,7 +168,7 @@ const PLAYLISTS = [
         name: "Today's Top Hits",
         description: "Songs that defined an era.",
         type: "playlist",
-        owner: "Spotifly",
+        owner: "Musicfly",
         color: "#ef4444",
         color2: "#7f1d1d",
         songIds: ["speed", "dont-stop", "nochentera", "azizam", "shape-of-you", "billie-jean", "thriller"],
@@ -178,7 +178,7 @@ const PLAYLISTS = [
         name: "Chill Mix",
         description: "Relax and unwind.",
         type: "playlist",
-        owner: "Spotifly",
+        owner: "Musicfly",
         color: "#06b6d4",
         color2: "#164e63",
         songIds: ["ocean-waves", "minecraft-calm-1", "minecraft-calm-2", "minecraft-calm-3", "azizam", "shape-of-you", "billie-jean"],
@@ -188,7 +188,7 @@ const PLAYLISTS = [
         name: "Discover Weekly",
         description: "Your weekly mixtape of fresh tracks.",
         type: "playlist",
-        owner: "Spotifly",
+        owner: "Musicfly",
         color: "#f59e0b",
         color2: "#78350f",
         songIds: ["nochentera", "azizam", "smooth-criminal", "beat-it", "shape-of-you"],
@@ -744,7 +744,7 @@ function updateNowPlayingUI() {
     $("#player-art").textContent = initials(song.title);
     $("#like-btn").classList.toggle("liked", state.likedSongs.has(song.id));
     updatePlayPauseIcon();
-    document.title = `${song.title} • ${song.artist} — Spotifly`;
+    document.title = `${song.title} • ${song.artist} — Musicfly`;
 }
 
 function updatePlayPauseIcon() {

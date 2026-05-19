@@ -1,6 +1,6 @@
 # Songs folder
 
-All tracks used by Spotifly (filenames must match `app.js`):
+All tracks used by Musicfly (filenames must match `app.js`):
 
 | File | Track |
 |------|-------|

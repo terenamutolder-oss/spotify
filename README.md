@@ -1,4 +1,4 @@
-# Spotifly
+# Musicfly
 
 A Spotify-inspired web music player, built with plain HTML, CSS and JavaScript. No frameworks, no build step, no dependencies — just open and play.
 

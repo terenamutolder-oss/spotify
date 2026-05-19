@@ -1,4 +1,4 @@
-"""Tiny static file server for Spotifly.
+"""Tiny static file server for Musicfly.
 
 The app is a pure static site (HTML/CSS/JS + mp3 files). We ship
 this small launcher so you can just double-click `start.cmd` or
@@ -43,7 +43,7 @@ class RangeHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def log_message(self, fmt, *args):
-        sys.stderr.write("[spotifly] " + (fmt % args) + "\n")
+        sys.stderr.write("[musicfly] " + (fmt % args) + "\n")
 
     def send_head(self):
         # If no Range header is present, fall back to the default behaviour.
@@ -135,7 +135,7 @@ def main() -> None:
     os.chdir(ROOT)
     with ReusableTCPServer(("127.0.0.1", PORT), RangeHandler) as httpd:
         url = f"http://localhost:{PORT}/"
-        print(f"Spotifly is running at {url}")
+        print(f"Musicfly is running at {url}")
         print("Press Ctrl+C to stop.")
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
         try:

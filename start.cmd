@@ -1,5 +1,5 @@
 @echo off
-REM Spotifly launcher - serves the site at http://localhost:5173/
+REM Musicfly launcher - serves the site at http://localhost:5173/
 where python >nul 2>nul
 if %errorlevel%==0 (
     python "%~dp0server.py"
