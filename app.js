@@ -3,7 +3,9 @@
    ============================================================ */
 
 // ----- Song & playlist data -----
-const SONGS = [
+// These are the bundled (demo / fallback) tracks. When a Firebase backend is
+// configured, SONGS and PLAYLISTS are replaced at runtime with data from the API.
+let SONGS = [
     {
         id: "thriller",
         title: "Thriller",
@@ -240,7 +242,7 @@ const SONGS = [
     },
 ];
 
-const PLAYLISTS = [
+let PLAYLISTS = [
     {
         id: "all",
         name: "All Songs",
@@ -372,6 +374,126 @@ const getGreeting = () => {
 
 /** Resolve song paths correctly on GitHub Pages (/spotify/) and locally. */
 const resolveSrc = (path) => new URL(path, window.location.href).href;
+
+/** Deterministic gradient colors derived from a string (for uploaded songs). */
+function colorsFor(seed) {
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) {
+        h = (h * 31 + seed.charCodeAt(i)) % 360;
+    }
+    const hue = h;
+    const c1 = `hsl(${hue}, 62%, 48%)`;
+    const c2 = `hsl(${(hue + 28) % 360}, 55%, 22%)`;
+    return { color: c1, color2: c2 };
+}
+
+/** Normalize an API song into the shape the player/UI expects. */
+function normalizeApiSong(s) {
+    const { color, color2 } = colorsFor(s.id || s.title || "song");
+    return {
+        id: s.id,
+        title: s.title,
+        artist: s.artist,
+        album: s.album || "Single",
+        src: s.audioUrl,
+        color,
+        color2,
+        uploaderUid: s.uploaderUid || null,
+        uploaderName: s.uploaderName || null,
+        createdAt: s.createdAt || null,
+    };
+}
+
+/** Build the sidebar/home playlists from a dynamic song list. */
+function buildDynamicPlaylists(songs) {
+    const playlists = [];
+    const allIds = songs.map((s) => s.id);
+
+    playlists.push({
+        id: "all",
+        name: "All Songs",
+        description: "Every track in the library.",
+        type: "playlist",
+        owner: "Musicfly",
+        color: "#1DB954",
+        color2: "#064e3b",
+        songIds: allIds,
+    });
+
+    if (songs.length) {
+        playlists.push({
+            id: "recently-added",
+            name: "Recently Added",
+            description: "The newest uploads.",
+            type: "playlist",
+            owner: "Musicfly",
+            color: "#7c3aed",
+            color2: "#1e1b4b",
+            songIds: allIds.slice(0, Math.min(20, allIds.length)),
+        });
+    }
+
+    const me = window.Musicfly?.currentUser?.uid;
+    if (me) {
+        const mine = songs.filter((s) => s.uploaderUid === me).map((s) => s.id);
+        if (mine.length) {
+            playlists.push({
+                id: "your-uploads",
+                name: "Your Uploads",
+                description: "Songs you published.",
+                type: "playlist",
+                owner: window.Musicfly.currentUser.name || "You",
+                color: "#f59e0b",
+                color2: "#78350f",
+                songIds: mine,
+            });
+        }
+    }
+
+    // One playlist per artist (with at least one song)
+    const byArtist = new Map();
+    songs.forEach((s) => {
+        const key = s.artist || "Unknown Artist";
+        if (!byArtist.has(key)) byArtist.set(key, []);
+        byArtist.get(key).push(s.id);
+    });
+    [...byArtist.entries()]
+        .sort((a, b) => b[1].length - a[1].length)
+        .forEach(([artist, ids]) => {
+            const { color, color2 } = colorsFor(artist);
+            playlists.push({
+                id: `artist:${artist}`,
+                name: artist,
+                description: `Tracks by ${artist}.`,
+                type: "playlist",
+                owner: "Musicfly",
+                color,
+                color2,
+                songIds: ids,
+            });
+        });
+
+    return playlists;
+}
+
+/** Load songs from the API (backend mode) or fall back to the bundled set. */
+async function bootstrapData() {
+    if (!window.Musicfly || !window.Musicfly.backendMode) {
+        return; // demo mode: keep bundled SONGS / PLAYLISTS
+    }
+    try {
+        const res = await window.Musicfly.authedFetch("/api/songs");
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const data = await res.json();
+        SONGS = (data.songs || []).map(normalizeApiSong);
+        PLAYLISTS = buildDynamicPlaylists(SONGS);
+    } catch (err) {
+        console.error("Could not load songs from API:", err);
+        SONGS = [];
+        PLAYLISTS = buildDynamicPlaylists(SONGS);
+        showPlaybackError("Could not load the library from the server. Try refreshing.");
+    }
+}
 
 // ====================================================
 // State
@@ -949,6 +1071,7 @@ function bindScrub(barEl, fillEl, thumbEl, onSeek) {
 }
 
 async function checkLibraryAvailable() {
+    if (window.Musicfly && window.Musicfly.backendMode) return; // API mode handles its own errors
     const song = SONGS[0];
     if (!song) return;
     try {
@@ -1089,8 +1212,206 @@ function init() {
         });
     });
 
+    wireAccountUI();
+    wireUploadUI();
+
     // Show home initially
     switchView("home");
 }
 
-document.addEventListener("DOMContentLoaded", init);
+// ====================================================
+// ACCOUNT UI (avatar + logout)
+// ====================================================
+function updateAccountUI() {
+    const user = window.Musicfly?.currentUser;
+    const avatar = $("#avatar-btn");
+    const uploadBtn = $("#upload-btn");
+    const dropName = $("#user-dropdown-name");
+
+    if (window.Musicfly?.backendMode && user) {
+        const label = user.name || user.email || "You";
+        if (avatar) avatar.textContent = (label[0] || "U").toUpperCase();
+        if (dropName) dropName.textContent = label;
+        uploadBtn?.classList.remove("hidden");
+    } else {
+        if (avatar) avatar.textContent = "T";
+        uploadBtn?.classList.add("hidden");
+    }
+}
+
+function wireAccountUI() {
+    const avatar = $("#avatar-btn");
+    const dropdown = $("#user-dropdown");
+    const logout = $("#logout-btn");
+
+    avatar?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!window.Musicfly?.backendMode) return;
+        dropdown?.classList.toggle("hidden");
+    });
+
+    document.addEventListener("click", () => dropdown?.classList.add("hidden"));
+
+    logout?.addEventListener("click", () => {
+        dropdown?.classList.add("hidden");
+        window.Musicfly?.signOut();
+    });
+}
+
+// ====================================================
+// UPLOAD UI
+// ====================================================
+function wireUploadUI() {
+    const modal = $("#upload-modal");
+    const openBtn = $("#upload-btn");
+    const closeBtn = $("#upload-close");
+    const form = $("#upload-form");
+    const fileInput = $("#upload-file");
+    const fileText = $("#file-drop-text");
+    const errorBox = $("#upload-error");
+    const progress = $("#upload-progress");
+    const progressFill = $("#upload-progress-fill");
+    const submit = $("#upload-submit");
+
+    const open = () => {
+        modal?.classList.remove("hidden");
+        showUploadError("");
+    };
+    const close = () => {
+        modal?.classList.add("hidden");
+        form?.reset();
+        if (fileText) fileText.textContent = "Click to choose an audio file (MP3, max 32 MB)";
+        progress?.classList.add("hidden");
+        if (progressFill) progressFill.style.width = "0%";
+    };
+
+    function showUploadError(msg) {
+        if (!errorBox) return;
+        errorBox.textContent = msg;
+        errorBox.classList.toggle("hidden", !msg);
+    }
+
+    openBtn?.addEventListener("click", open);
+    closeBtn?.addEventListener("click", close);
+    modal?.addEventListener("click", (e) => {
+        if (e.target === modal) close();
+    });
+
+    fileInput?.addEventListener("change", () => {
+        const f = fileInput.files?.[0];
+        if (f && fileText) fileText.textContent = f.name;
+    });
+
+    form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        showUploadError("");
+
+        const file = fileInput.files?.[0];
+        const title = $("#upload-title").value.trim();
+        const artist = $("#upload-artist").value.trim();
+        const album = $("#upload-album").value.trim();
+
+        if (!file) return showUploadError("Please choose an audio file.");
+        if (file.size > 32 * 1024 * 1024) return showUploadError("File is larger than 32 MB.");
+        if (!title || !artist) return showUploadError("Title and artist are required.");
+
+        const token = await window.Musicfly.getToken();
+        if (!token) return showUploadError("You must be logged in to upload.");
+
+        const fd = new FormData();
+        fd.append("audio", file);
+        fd.append("title", title);
+        fd.append("artist", artist);
+        fd.append("album", album);
+
+        submit.disabled = true;
+        submit.textContent = "Uploading…";
+        progress?.classList.remove("hidden");
+
+        try {
+            await uploadWithProgress(
+                (window.Musicfly.apiBase || "") + "/api/songs",
+                fd,
+                token,
+                (pct) => {
+                    if (progressFill) progressFill.style.width = `${pct}%`;
+                }
+            );
+            close();
+            await bootstrapData();
+            renderLibrary();
+            renderHome();
+            renderBrowse();
+            updateAccountUI();
+            switchView("home");
+        } catch (err) {
+            showUploadError(err.message || "Upload failed.");
+        } finally {
+            submit.disabled = false;
+            submit.textContent = "Publish to library";
+        }
+    });
+}
+
+/** Upload via XHR so we get a progress bar (fetch has no upload progress). */
+function uploadWithProgress(url, formData, token, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && onProgress) {
+                onProgress(Math.round((e.loaded / e.total) * 100));
+            }
+        };
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(JSON.parse(xhr.responseText || "{}"));
+            } else {
+                let msg = `Upload failed (${xhr.status}).`;
+                try {
+                    msg = JSON.parse(xhr.responseText).error || msg;
+                } catch {}
+                reject(new Error(msg));
+            }
+        };
+        xhr.onerror = () => reject(new Error("Network error during upload."));
+        xhr.send(formData);
+    });
+}
+
+// ====================================================
+// APP ENTRY (controlled by auth.js)
+// ====================================================
+let appWired = false;
+
+window.MusicflyApp = {
+    async start() {
+        await bootstrapData();
+        if (!appWired) {
+            init();
+            appWired = true;
+        } else {
+            renderLibrary();
+            renderHome();
+            renderBrowse();
+        }
+        updateAccountUI();
+    },
+    async onUserChanged() {
+        await bootstrapData();
+        renderLibrary();
+        renderHome();
+        renderBrowse();
+        updateAccountUI();
+        switchView("home");
+    },
+    onSignedOut() {
+        try {
+            getAudio().pause();
+        } catch {}
+        state.isPlaying = false;
+        state.queue = [];
+        state.currentIndex = -1;
+    },
+};

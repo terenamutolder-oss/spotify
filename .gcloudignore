@@ -1,0 +1,10 @@
+.git
+.gitignore
+node_modules
+_extracted
+__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+docs

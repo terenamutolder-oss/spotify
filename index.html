@@ -73,8 +73,17 @@
                 </div>
 
                 <div class="user-area">
-                    <button class="pill-btn">Install App</button>
-                    <button class="avatar" title="Profile">T</button>
+                    <button class="pill-btn upload-pill hidden" id="upload-btn" title="Upload a song">
+                        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1 14.5a.75.75 0 0 0 .75.75h12.5a.75.75 0 0 0 0-1.5H1.75a.75.75 0 0 0-.75.75zM8 1a.75.75 0 0 1 .53.22l3.5 3.5a.75.75 0 0 1-1.06 1.06L8.75 3.56V11.5a.75.75 0 0 1-1.5 0V3.56L5.03 5.78a.75.75 0 0 1-1.06-1.06l3.5-3.5A.75.75 0 0 1 8 1z"/></svg>
+                        <span>Upload</span>
+                    </button>
+                    <div class="user-menu">
+                        <button class="avatar" id="avatar-btn" title="Account">T</button>
+                        <div class="user-dropdown hidden" id="user-dropdown">
+                            <div class="user-dropdown-name" id="user-dropdown-name">Account</div>
+                            <button type="button" id="logout-btn">Log out</button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -200,8 +209,47 @@
         </footer>
     </div>
 
+    <!-- ============ UPLOAD MODAL ============ -->
+    <div class="modal-overlay hidden" id="upload-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Upload a song</h2>
+                <button type="button" class="modal-close" id="upload-close" title="Close">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M2.47 2.47a.75.75 0 0 1 1.06 0L8 6.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L9.06 8l4.47 4.47a.75.75 0 1 1-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 0 1 0-1.06z"/></svg>
+                </button>
+            </div>
+            <form id="upload-form" class="upload-form">
+                <label class="file-drop" id="file-drop">
+                    <input type="file" id="upload-file" accept="audio/*" hidden />
+                    <svg viewBox="0 0 16 16" width="28" height="28" fill="currentColor"><path d="M8 1a.75.75 0 0 1 .53.22l3.5 3.5a.75.75 0 0 1-1.06 1.06L8.75 3.56V11.5a.75.75 0 0 1-1.5 0V3.56L5.03 5.78a.75.75 0 0 1-1.06-1.06l3.5-3.5A.75.75 0 0 1 8 1z"/><path d="M1 14.5a.75.75 0 0 0 .75.75h12.5a.75.75 0 0 0 0-1.5H1.75a.75.75 0 0 0-.75.75z"/></svg>
+                    <span id="file-drop-text">Click to choose an audio file (MP3, max 32 MB)</span>
+                </label>
+                <label>Title
+                    <input type="text" id="upload-title" required placeholder="Song title" />
+                </label>
+                <label>Artist
+                    <input type="text" id="upload-artist" required placeholder="Artist name" />
+                </label>
+                <label>Album <span class="optional">(optional)</span>
+                    <input type="text" id="upload-album" placeholder="Album or single" />
+                </label>
+                <div class="upload-error hidden" id="upload-error"></div>
+                <div class="upload-progress hidden" id="upload-progress">
+                    <div class="upload-progress-fill" id="upload-progress-fill"></div>
+                </div>
+                <button type="submit" class="auth-submit" id="upload-submit">Publish to library</button>
+            </form>
+        </div>
+    </div>
+
     <div class="playback-toast hidden" id="playback-toast" role="alert"></div>
     <audio id="audio" preload="auto" playsinline></audio>
+
+    <!-- Firebase (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
