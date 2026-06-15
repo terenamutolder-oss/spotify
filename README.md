@@ -16,10 +16,11 @@ A Spotify-inspired web music player, built with plain HTML, CSS and JavaScript. 
 
 ## Live demo
 
-- **Vercel:** https://spotify-kappa-jade.vercel.app/
-- **GitHub Pages:** https://terenamutolder-oss.github.io/spotify/
+- **Vercel (production):** https://spotify-five-teal.vercel.app/
+- **Google Cloud Run:** https://musicfly-107401835210.us-central1.run.app/ *(requires Google sign-in if your org blocks public access)*
+- **GitHub Pages:** https://terenamutolder-oss.github.io/spotify/ *(enable Pages → GitHub Actions in repo settings if 404)*
 
-Both deploy from this repo and include the `songs/` MP3 files for playback.
+Static demo mode works on Vercel without login. Cloud Run adds accounts + uploads once Firebase is configured in `firebase-config.js`.
 
 ## Run locally
 
