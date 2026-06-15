@@ -18,3 +18,15 @@ All tracks used by Musicfly (filenames must match `app.js`):
 | `minecraft-calm-3.mp3` | Minecraft — Calm 3 |
 | `minecraft-cat.mp3` | Minecraft — Cat |
 | `ocean-waves.mp3` | Soothing Ocean Waves — Dragon Studio |
+| `stereo-madness.mp3` | Stereo Madness — DJVI |
+| `years.mp3` | Years — DJVI |
+| `geometrical-dominator.mp3` | Geometrical Dominator — F-777 |
+| `dash.mp3` | Dash — Zomboy |
+| `gd-main-menu.mp3` | Main Menu — RobTop Games |
+| `power-trip.mp3` | Power Trip — Boom Kitty |
+| `deadlocked.mp3` | Deadlocked — F-777 |
+| `geometry-dash.mp3` | Geometry Dash — RobTop Games |
+| `payload.mp3` | Payload — Waterflame |
+| `press-start.mp3` | Press Start — MDK |
+| `knock-me-out.mp3` | Knock Me Out — Raw Power |
+| `gd-death-sound.mp3` | Death Sound Effect — RobTop Games |
