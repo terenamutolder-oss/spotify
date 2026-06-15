@@ -214,6 +214,15 @@ let SONGS = [
         color2: "#064e3b",
     },
     {
+        id: "round-1",
+        title: "Round 1",
+        artist: "Dex",
+        album: "Geometry Dash Vol. 3",
+        src: "songs/round-1.mp3",
+        color: "#8b5cf6",
+        color2: "#4c1d95",
+    },
+    {
         id: "press-start",
         title: "Press Start",
         artist: "MDK",
@@ -291,6 +300,7 @@ let PLAYLISTS = [
             "power-trip",
             "deadlocked",
             "payload",
+            "round-1",
             "press-start",
             "knock-me-out",
             "gd-death-sound",

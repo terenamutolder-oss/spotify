@@ -27,6 +27,7 @@ All tracks used by Musicfly (filenames must match `app.js`):
 | `deadlocked.mp3` | Deadlocked — F-777 |
 | `geometry-dash.mp3` | Geometry Dash — RobTop Games |
 | `payload.mp3` | Payload — Waterflame |
+| `round-1.mp3` | Round 1 — Dex |
 | `press-start.mp3` | Press Start — MDK |
 | `knock-me-out.mp3` | Knock Me Out — Raw Power |
 | `gd-death-sound.mp3` | Death Sound Effect — RobTop Games |
