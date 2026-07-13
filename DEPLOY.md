@@ -135,11 +135,16 @@ gcloud run deploy musicfly \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
+  --no-invoker-iam-check \
   --set-env-vars GCLOUD_PROJECT=YOUR_PROJECT_ID,GCS_BUCKET=YOUR_BUCKET
 ```
 
 When it finishes, it prints a **Service URL** like
 `https://musicfly-xxxxx-uc.a.run.app`. Open it — you should see the login screen.
+
+> **"Error: Forbidden" on Cloud Run?** Your Google org likely blocks public IAM.
+> Run `scripts\fix-public-access.cmd` (after `gcloud auth login`), or redeploy with
+> `--no-invoker-iam-check` as shown above.
 
 Now go back to **Firebase → Authentication → Settings → Authorized domains** and add that
 Cloud Run hostname so Google sign-in works.
@@ -173,7 +178,7 @@ GCLOUD_PROJECT=YOUR_PROJECT_ID GCS_BUCKET=YOUR_BUCKET npm start
 Just re-run the deploy command:
 
 ```bash
-gcloud run deploy musicfly --source . --region us-central1 --allow-unauthenticated \
+gcloud run deploy musicfly --source . --region us-central1 --allow-unauthenticated --no-invoker-iam-check \
   --set-env-vars GCLOUD_PROJECT=YOUR_PROJECT_ID,GCS_BUCKET=YOUR_BUCKET
 ```
 
