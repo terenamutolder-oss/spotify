@@ -14,13 +14,17 @@ A Spotify-inspired web music player, built with plain HTML, CSS and JavaScript. 
 - Keyboard shortcuts: `Space` (play/pause), `Shift+→` / `Shift+←` (next/prev), `↑` / `↓` (volume)
 - Responsive layout
 
-## Live demo
+## Live app
 
-- **Vercel (production):** https://spotify-five-teal.vercel.app/
-- **Google Cloud Run:** https://musicfly-107401835210.us-central1.run.app/ *(requires Google sign-in if your org blocks public access)*
-- **GitHub Pages:** https://terenamutolder-oss.github.io/spotify/ *(enable Pages → GitHub Actions in repo settings if 404)*
+### Use this link (works now)
 
-Static demo mode works on Vercel without login. Cloud Run adds accounts + uploads once Firebase is configured in `firebase-config.js`.
+**https://spotify-five-teal.vercel.app/**
+
+No login required. All songs play.
+
+### Cloud Run link (Forbidden error?)
+
+If **https://musicfly-107401835210.us-central1.run.app/** shows *Error: Forbidden*, see **[FIX-FORBIDDEN.md](FIX-FORBIDDEN.md)** — run one command after `gcloud auth login`, or use GitHub Actions.
 
 ## Run locally
 

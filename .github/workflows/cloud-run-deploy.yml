@@ -1,0 +1,41 @@
+name: Deploy Cloud Run (public access)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "Dockerfile"
+      - "package.json"
+      - ".github/workflows/cloud-run-deploy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.GCP_SA_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run with public access
+        run: |
+          gcloud run deploy musicfly \
+            --source . \
+            --region us-central1 \
+            --project marsels-project \
+            --allow-unauthenticated \
+            --no-invoker-iam-check \
+            --set-env-vars "GCLOUD_PROJECT=marsels-project,GCS_BUCKET=marsels-project-musicfly" \
+            --quiet
+
+      - name: Print service URL
+        run: gcloud run services describe musicfly --region us-central1 --format='value(status.url)'
