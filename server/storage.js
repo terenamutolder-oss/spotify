@@ -1,16 +1,6 @@
-import { Storage } from "@google-cloud/storage";
 import { randomUUID } from "node:crypto";
 import { getFirestore } from "./firebase.js";
-
-const BUCKET_NAME = process.env.GCS_BUCKET;
-const storage = new Storage();
-
-function bucket() {
-    if (!BUCKET_NAME) {
-        throw new Error("GCS_BUCKET environment variable is not set.");
-    }
-    return storage.bucket(BUCKET_NAME);
-}
+import { getMediaBucket, publicMediaUrl } from "./mediaBucket.js";
 
 function songsCollection() {
     return getFirestore().collection("songs");
@@ -29,12 +19,12 @@ const EXT_BY_MIME = {
 };
 
 /**
- * Uploads an audio buffer to GCS as a public object and returns its public URL.
+ * Uploads an audio buffer to Firebase Storage as a public object.
  */
 export async function uploadAudio(buffer, mimeType) {
     const ext = EXT_BY_MIME[mimeType] || "mp3";
-    const objectName = `audio/${randomUUID()}.${ext}`;
-    const file = bucket().file(objectName);
+    const objectName = `music/${randomUUID()}.${ext}`;
+    const file = getMediaBucket().file(objectName);
 
     await file.save(buffer, {
         resumable: false,
@@ -42,36 +32,29 @@ export async function uploadAudio(buffer, mimeType) {
         metadata: { cacheControl: "public, max-age=31536000, immutable" },
     });
 
-    // Make the object publicly readable so the <audio> element can stream it
-    // directly (GCS handles HTTP Range requests for seeking).
     try {
         await file.makePublic();
     } catch (err) {
-        // Buckets with uniform bucket-level access reject per-object ACLs;
-        // in that case grant allUsers objectViewer at the bucket level instead
-        // (documented in DEPLOY.md). Surface a clear error either way.
         throw new Error(
-            "Could not make the uploaded file public. If the bucket uses uniform " +
-                "bucket-level access, grant 'roles/storage.objectViewer' to allUsers on the bucket. " +
+            "Could not make the uploaded file public. In Firebase Console → Storage, " +
+                "ensure the bucket allows public reads (see DEPLOY.md). " +
                 `(${err.message})`
         );
     }
 
-    const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${objectName}`;
-    return { storagePath: objectName, audioUrl: publicUrl };
+    return { storagePath: objectName, audioUrl: publicMediaUrl(objectName) };
 }
 
 export async function deleteAudio(storagePath) {
     if (!storagePath) return;
-    await bucket()
-        .file(storagePath)
-        .delete({ ignoreNotFound: true });
+    await getMediaBucket().file(storagePath).delete({ ignoreNotFound: true });
 }
 
 export async function createSong(meta) {
     const doc = {
         title: meta.title,
         artist: meta.artist,
+        author: meta.author || meta.uploaderName || meta.artist,
         album: meta.album || "Single",
         storagePath: meta.storagePath,
         audioUrl: meta.audioUrl,
@@ -91,6 +74,7 @@ export async function listSongs() {
             id: d.id,
             title: data.title,
             artist: data.artist,
+            author: data.author || data.uploaderName || data.artist,
             album: data.album,
             audioUrl: data.audioUrl,
             uploaderUid: data.uploaderUid,

@@ -1,7 +1,7 @@
 {
   "name": "musicfly",
   "version": "2.0.0",
-  "description": "Spotify-inspired music app with accounts and uploads, on Google Cloud Run + Firebase + GCS.",
+  "description": "Spotify-inspired music app — Firebase Auth + Firestore + Firebase Storage on Cloud Run.",
   "type": "module",
   "engines": {
     "node": ">=18"

@@ -1,18 +1,27 @@
 import admin from "firebase-admin";
 
 /**
- * Initializes Firebase Admin using Application Default Credentials (ADC).
+ * Firebase Admin — shared backend for:
+ *   • Firebase Auth  (accounts / login tokens)
+ *   • Firestore      (user profiles, song/podcast metadata, playlists)
+ *   • Firebase Storage (music + podcast audio files)
  *
+ * Uses Application Default Credentials (ADC).
  * On Cloud Run the runtime service account provides credentials automatically.
- * Locally, set GOOGLE_APPLICATION_CREDENTIALS to a service-account key, or run
- * `gcloud auth application-default login`.
+ * Locally: `gcloud auth application-default login` or GOOGLE_APPLICATION_CREDENTIALS.
  */
 let app = null;
 
+function projectId() {
+    return process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
+}
+
 export function getAdmin() {
     if (!app) {
+        const pid = projectId();
         app = admin.initializeApp({
-            projectId: process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT,
+            projectId: pid,
+            storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.GCS_BUCKET || (pid ? `${pid}.appspot.com` : undefined),
         });
     }
     return admin;

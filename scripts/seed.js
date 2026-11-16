@@ -1,25 +1,27 @@
 /*
- * Seeds Firestore + GCS with the bundled MP3s in ../songs so the library
- * isn't empty on first deploy.
+ * Seeds Firestore + Firebase Storage with the bundled MP3s in ../songs.
  *
- * Usage (after configuring GCP — see DEPLOY.md):
- *   GCLOUD_PROJECT=your-project GCS_BUCKET=your-bucket node scripts/seed.js
+ * Usage (after configuring Firebase — see DEPLOY.md):
+ *   GCLOUD_PROJECT=your-project node scripts/seed.js
  *
- * Requires credentials: either GOOGLE_APPLICATION_CREDENTIALS pointing to a
- * service-account key, or `gcloud auth application-default login`.
+ * Optional: FIREBASE_STORAGE_BUCKET=your-project.appspot.com
  */
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import admin from "firebase-admin";
-import { Storage } from "@google-cloud/storage";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SONGS_DIR = path.join(__dirname, "..", "songs");
-const BUCKET = process.env.GCS_BUCKET;
 
-if (!BUCKET) {
-    console.error("GCS_BUCKET is not set. See DEPLOY.md.");
+const PROJECT_ID = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
+const BUCKET =
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    process.env.GCS_BUCKET ||
+    (PROJECT_ID ? `${PROJECT_ID}.appspot.com` : null);
+
+if (!PROJECT_ID || !BUCKET) {
+    console.error("Set GCLOUD_PROJECT (and optionally FIREBASE_STORAGE_BUCKET). See DEPLOY.md.");
     process.exit(1);
 }
 
@@ -53,10 +55,9 @@ const MANIFEST = {
     "gd-death-sound.mp3": { title: "Death Sound Effect", artist: "RobTop Games", album: "Geometry Dash" },
 };
 
-admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT });
+admin.initializeApp({ projectId: PROJECT_ID, storageBucket: BUCKET });
 const db = admin.firestore();
-const storage = new Storage();
-const bucket = storage.bucket(BUCKET);
+const bucket = admin.storage().bucket(BUCKET);
 
 async function alreadySeeded(title) {
     const snap = await db.collection("songs").where("title", "==", title).limit(1).get();
@@ -85,7 +86,7 @@ async function run() {
             continue;
         }
 
-        const objectName = `audio/seed-${file}`;
+        const objectName = `music/seed-${file}`;
         const localPath = path.join(SONGS_DIR, file);
         await bucket.upload(localPath, {
             destination: objectName,
@@ -97,6 +98,7 @@ async function run() {
         const audioUrl = `https://storage.googleapis.com/${BUCKET}/${objectName}`;
         await db.collection("songs").add({
             ...meta,
+            author: meta.artist,
             storagePath: objectName,
             audioUrl,
             uploaderUid: "seed",
@@ -106,7 +108,7 @@ async function run() {
         console.log(`Seeded: ${meta.title}`);
         added++;
     }
-    console.log(`\nDone. Added ${added} song(s).`);
+    console.log(`\nDone. Added ${added} song(s) to Firebase Storage (${BUCKET}).`);
 }
 
 run().catch((err) => {
