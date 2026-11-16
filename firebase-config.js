@@ -1,17 +1,14 @@
 /*
- * Local placeholder config. Replace these values with your real Firebase web
- * app config to enable accounts + uploads. With the placeholders below,
- * Musicfly runs in static demo mode (no login required).
- *
- * See firebase-config.example.js for where to find these values.
+ * Firebase config for marsels-project (Musicfly).
+ * Auth + Firestore + Firebase Storage — see DEPLOY.md.
  */
 window.FIREBASE_CONFIG = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID",
+    apiKey: "AIzaSyCyOiB5u7jfagYzaNwVwZgNRkUcSQHCxYI",
+    authDomain: "marsels-project.firebaseapp.com",
+    projectId: "marsels-project",
+    storageBucket: "marsels-project.firebasestorage.app",
+    messagingSenderId: "107401835210",
+    appId: "1:107401835210:web:8337a0ff41e99b529dba33",
 };
 
 window.MUSICFLY_API_BASE = "";

@@ -3,7 +3,13 @@
  * Find it in: Firebase console → Project settings → General → "Your apps" → Web app → SDK setup.
  *
  * These values are PUBLIC by design (safe to commit / ship to the browser).
- * If you leave the placeholders below, Musicfly runs in static demo mode (no login).
+ *
+ * With real values configured:
+ *   • Firebase Auth  → accounts (email/password + Google login)
+ *   • Firestore      → user profiles, playlists, song/podcast metadata (via API)
+ *   • Firebase Storage → music & podcast audio files (via API uploads)
+ *
+ * With placeholders below, Musicfly runs in local demo mode (browser-only accounts).
  */
 window.FIREBASE_CONFIG = {
     apiKey: "YOUR_API_KEY",
@@ -14,6 +20,5 @@ window.FIREBASE_CONFIG = {
     appId: "YOUR_APP_ID",
 };
 
-// Optional: set if your API is hosted on a different origin than the frontend.
-// Leave empty when the Cloud Run service serves both the site and the API.
+// Leave empty when Cloud Run serves both the site and the API on the same origin.
 window.MUSICFLY_API_BASE = "";

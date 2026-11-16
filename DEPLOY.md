@@ -1,10 +1,18 @@
-# Deploying Musicfly to Google Cloud
+# Deploying Musicfly to Google Cloud + Firebase
 
-This guide takes you from nothing to a live, login-protected music app with uploads,
-running on **Cloud Run**, with audio in **Google Cloud Storage** and metadata in **Firestore**,
-and accounts via **Firebase Auth**.
+This guide takes you from nothing to a live music app with accounts, uploads, podcasts,
+and playlists — all on **one Firebase / Google Cloud project**.
 
-Everything is copy-paste. Replace `YOUR_PROJECT_ID` and `YOUR_BUCKET` with your own values.
+## Architecture
+
+| What | Service |
+|------|---------|
+| **Accounts & login** | **Firebase Auth** (email/password + Google) |
+| **User profiles, song metadata, playlists, podcasts** | **Firestore** |
+| **Music & podcast audio files** | **Firebase Storage** (`<projectId>.appspot.com`) |
+| **API + website** | **Cloud Run** (Node.js Express) |
+
+Replace `YOUR_PROJECT_ID` with your own value everywhere below.
 
 ---
 
@@ -46,7 +54,7 @@ gcloud services enable \
 
 ---
 
-## 2. Set up Firebase Auth (accounts)
+## 2. Firebase — accounts (Auth)
 
 1. Go to https://console.firebase.google.com/ → **Add project** → choose your existing
    `YOUR_PROJECT_ID` (Firebase and Google Cloud share projects).
@@ -68,49 +76,77 @@ gcloud services enable \
    window.MUSICFLY_API_BASE = "";
    ```
 
+   The `storageBucket` value is your **Firebase Storage** bucket for music and podcasts.
+
 6. After you know your Cloud Run URL (step 6), add it under
    **Authentication → Settings → Authorized domains**.
 
 ---
 
-## 3. Create the Firestore database
+## 3. Firestore — metadata database
 
 ```bash
 gcloud firestore databases create --location=us-central1
 ```
 
-(Choose the region nearest you; keep it consistent with Cloud Run.)
+Collections used automatically:
+
+- `users` — birth date, upload eligibility
+- `songs` — track metadata + Firebase Storage URL
+- `playlists` — user playlists and folders
+- `podcasts` + `episodes` — podcast shows and episodes
 
 ---
 
-## 4. Create the Cloud Storage bucket (audio files)
+## 4. Firebase Storage — music & podcast files
+
+1. In Firebase Console → **Build → Storage → Get started.**
+2. Choose **production mode** (we set rules below) and the same region as Firestore.
+3. This creates the default bucket: `YOUR_PROJECT_ID.appspot.com`
+
+Deploy storage rules from this repo (public read for streaming, server-only writes):
 
 ```bash
-gcloud storage buckets create gs://YOUR_BUCKET --location=us-central1 --uniform-bucket-level-access
+firebase deploy --only storage
 ```
 
-Make objects publicly readable (so the browser can stream audio directly, with seek support):
+If you don't have the Firebase CLI yet:
 
 ```bash
-gcloud storage buckets add-iam-policy-binding gs://YOUR_BUCKET \
+npm install -g firebase-tools
+firebase login
+firebase use YOUR_PROJECT_ID
+```
+
+Or make the bucket publicly readable via IAM (alternative to rules for streaming):
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://YOUR_PROJECT_ID.appspot.com \
   --member=allUsers --role=roles/storage.objectViewer
 ```
 
-> Audio files become world-readable by URL. App access and uploading still require login.
-> If you prefer private files, that needs signed URLs (not covered here).
+> Audio files are world-readable by URL so the browser can stream them.
+> Uploading still requires login + age 16+ via the API.
 
-(Optional) allow the browser to read audio cross-origin for waveform/duration features:
+(Optional) CORS for range requests / seeking:
 
 ```bash
 echo '[{"origin":["*"],"method":["GET","HEAD"],"responseHeader":["Content-Type","Range"],"maxAgeSeconds":3600}]' > cors.json
-gcloud storage buckets update gs://YOUR_BUCKET --cors-file=cors.json
+gcloud storage buckets update gs://YOUR_PROJECT_ID.appspot.com --cors-file=cors.json
+```
+
+File layout in the bucket:
+
+```text
+music/       ← uploaded songs
+podcasts/    ← podcast episodes
 ```
 
 ---
 
-## 5. Give the Cloud Run service account access
+## 5. Give Cloud Run access to Firebase
 
-Cloud Run uses the project's compute service account. Grant it Storage + Firestore access:
+Cloud Run uses the project's compute service account:
 
 ```bash
 PROJECT_NUMBER=$(gcloud projects describe YOUR_PROJECT_ID --format='value(projectNumber)')
@@ -136,50 +172,50 @@ gcloud run deploy musicfly \
   --region us-central1 \
   --allow-unauthenticated \
   --no-invoker-iam-check \
-  --set-env-vars GCLOUD_PROJECT=YOUR_PROJECT_ID,GCS_BUCKET=YOUR_BUCKET
+  --set-env-vars GCLOUD_PROJECT=YOUR_PROJECT_ID
 ```
+
+The server auto-uses Firebase Storage at `YOUR_PROJECT_ID.appspot.com`.
+Override with `FIREBASE_STORAGE_BUCKET` if needed.
 
 When it finishes, it prints a **Service URL** like
 `https://musicfly-xxxxx-uc.a.run.app`. Open it — you should see the login screen.
 
-> **"Error: Forbidden" on Cloud Run?** Your Google org likely blocks public IAM.
-> Run `scripts\fix-public-access.cmd` (after `gcloud auth login`), or redeploy with
-> `--no-invoker-iam-check` as shown above.
+> **"Error: Forbidden" on Cloud Run?** Your Google org may block public IAM.
+> Run `scripts\fix-public-access.cmd`, or redeploy with `--no-invoker-iam-check` as above.
 
-Now go back to **Firebase → Authentication → Settings → Authorized domains** and add that
-Cloud Run hostname so Google sign-in works.
+Add the Cloud Run hostname to **Firebase → Authentication → Authorized domains** so Google sign-in works.
 
 ---
 
 ## 7. (Optional) Seed the starter songs
 
-To upload the bundled MP3s in `songs/` into your new library:
+Uploads the bundled MP3s in `songs/` to Firebase Storage + Firestore:
 
 ```bash
-GCLOUD_PROJECT=YOUR_PROJECT_ID GCS_BUCKET=YOUR_BUCKET npm install
-GCLOUD_PROJECT=YOUR_PROJECT_ID GCS_BUCKET=YOUR_BUCKET node scripts/seed.js
+GCLOUD_PROJECT=YOUR_PROJECT_ID npm install
+GCLOUD_PROJECT=YOUR_PROJECT_ID node scripts/seed.js
 ```
 
 ---
 
-## Running locally against the cloud
+## Running locally against Firebase
 
 ```bash
 npm install
-# uses your `gcloud auth application-default login` credentials
-GCLOUD_PROJECT=YOUR_PROJECT_ID GCS_BUCKET=YOUR_BUCKET npm start
+GCLOUD_PROJECT=YOUR_PROJECT_ID npm start
 # open http://localhost:8080
 ```
+
+Uses your `gcloud auth application-default login` credentials and the same Firebase project.
 
 ---
 
 ## Updating the app
 
-Just re-run the deploy command:
-
 ```bash
 gcloud run deploy musicfly --source . --region us-central1 --allow-unauthenticated --no-invoker-iam-check \
-  --set-env-vars GCLOUD_PROJECT=YOUR_PROJECT_ID,GCS_BUCKET=YOUR_BUCKET
+  --set-env-vars GCLOUD_PROJECT=YOUR_PROJECT_ID
 ```
 
 ---
@@ -188,9 +224,9 @@ gcloud run deploy musicfly --source . --region us-central1 --allow-unauthenticat
 
 - **Login screen never appears / "demo mode":** `firebase-config.js` still has placeholder
   values. Paste your real Firebase web config.
-- **Uploads fail with a "make public" error:** the bucket uses uniform access — run the
-  `add-iam-policy-binding ... allUsers ... objectViewer` command from step 4.
-- **`GET /api/songs` returns 500:** check the Cloud Run logs
+- **Uploads fail with a "make public" error:** enable Firebase Storage (step 4) and grant
+  `allUsers` → `Storage Object Viewer` on the bucket, or deploy `storage.rules`.
+- **`GET /api/songs` returns 500:** check Cloud Run logs
   (`gcloud run services logs read musicfly --region us-central1`). Usually a missing IAM role
-  (step 5) or `GCS_BUCKET` not set.
+  (step 5) or Firestore not created (step 3).
 - **Google sign-in popup error:** add the Cloud Run domain to Firebase Authorized domains.

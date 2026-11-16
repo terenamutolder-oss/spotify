@@ -6,6 +6,12 @@ on:
     branches: [main]
     paths:
       - "server/**"
+      - "index.html"
+      - "app.js"
+      - "auth.js"
+      - "styles.css"
+      - "local-store.js"
+      - "firebase-config.js"
       - "Dockerfile"
       - "package.json"
       - ".github/workflows/cloud-run-deploy.yml"
@@ -34,7 +40,7 @@ jobs:
             --project marsels-project \
             --allow-unauthenticated \
             --no-invoker-iam-check \
-            --set-env-vars "GCLOUD_PROJECT=marsels-project,GCS_BUCKET=marsels-project-musicfly" \
+            --set-env-vars "GCLOUD_PROJECT=marsels-project,FIREBASE_STORAGE_BUCKET=marsels-project.firebasestorage.app,GCS_BUCKET=marsels-project.firebasestorage.app" \
             --quiet
 
       - name: Print service URL

@@ -16,15 +16,21 @@ A Spotify-inspired web music player, built with plain HTML, CSS and JavaScript. 
 
 ## Live app
 
-### Use this link (works now)
+### Cloud Run (Firebase — accounts + uploads)
 
-**https://spotify-five-teal.vercel.app/**
+**https://musicfly-107401835210.us-central1.run.app/**
 
-No login required. All songs play.
+- **Firebase Auth** — sign up / log in (email or Google)
+- **Upload music** — signed-in users can publish MP3s to the shared library (top-bar **Upload** or home **Upload music**)
+- **Firestore** — playlists, folders, podcasts, song metadata
+- **Firebase Storage** — music & podcast audio files
+- Podcasts/folders still require age 16+
 
-### Cloud Run link (Forbidden error?)
+### Static demo (no login)
 
-If **https://musicfly-107401835210.us-central1.run.app/** shows *Error: Forbidden*, see **[FIX-FORBIDDEN.md](FIX-FORBIDDEN.md)** — run one command after `gcloud auth login`, or use GitHub Actions.
+**https://spotify-five-teal.vercel.app/** — bundled songs only, no account needed.
+
+If Cloud Run shows *Error: Forbidden*, see **[FIX-FORBIDDEN.md](FIX-FORBIDDEN.md)**.
 
 ## Run locally
 

@@ -1311,11 +1311,80 @@ body.auth-locked {
     margin-left: 4px;
 }
 
+.auth-visitor {
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 500px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.auth-visitor:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ====================== UPLOAD PROMO ====================== */
+.upload-promo {
+    margin-top: 8px;
+}
+
+.upload-promo-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 24px;
+    border-radius: 12px;
+    background: linear-gradient(120deg, rgba(29, 185, 84, 0.22), rgba(18, 18, 18, 0.9) 55%, rgba(40, 40, 40, 0.95));
+    border: 1px solid rgba(29, 185, 84, 0.28);
+}
+
+.upload-promo-card h2 {
+    margin: 0 0 6px;
+    font-size: 1.25rem;
+}
+
+.upload-promo-card p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+@media (max-width: 720px) {
+    .upload-promo-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 /* ====================== USER MENU ====================== */
 .upload-pill {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+.logout-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: var(--text-primary);
+}
+
+.logout-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.55);
+    transform: scale(1.02);
 }
 
 .user-menu {
@@ -1453,6 +1522,62 @@ body.auth-locked {
     width: 0;
     background: var(--accent);
     transition: width 0.15s ease;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.create-pill {
+    margin-right: 4px;
+}
+
+.modal-sm {
+    max-width: 360px;
+}
+
+.create-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 24px 24px;
+}
+
+.create-menu-item {
+    width: 100%;
+    padding: 14px 16px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.create-menu-item:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.upload-form select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.upload-form select:focus {
+    outline: none;
+    border-color: var(--accent);
 }
 
 @media (max-width: 800px) {

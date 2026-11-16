@@ -338,6 +338,12 @@ let PLAYLISTS = [
     },
 ];
 
+const BUNDLED_SONGS = SONGS.map((s) => ({ ...s }));
+const BUNDLED_PLAYLISTS = JSON.parse(JSON.stringify(PLAYLISTS));
+let USER_COLLECTIONS = [];
+let PODCASTS = [];
+let libraryFilter = "all";
+
 const GENRES = [
     { name: "Pop",        color: "#dc2743" },
     { name: "Rock",       color: "#e91429" },
@@ -366,6 +372,7 @@ const formatTime = (sec) => {
 
 const songById = (id) => SONGS.find((s) => s.id === id);
 const playlistById = (id) => PLAYLISTS.find((p) => p.id === id);
+const podcastById = (id) => PODCASTS.find((p) => p.id === id);
 
 const gradient = (a, b) => `linear-gradient(135deg, ${a} 0%, ${b} 100%)`;
 
@@ -404,13 +411,74 @@ function normalizeApiSong(s) {
         id: s.id,
         title: s.title,
         artist: s.artist,
+        author: s.author || s.uploaderName || s.artist,
         album: s.album || "Single",
-        src: s.audioUrl,
+        src: s.audioUrl || s.src,
         color,
         color2,
         uploaderUid: s.uploaderUid || null,
         uploaderName: s.uploaderName || null,
         createdAt: s.createdAt || null,
+    };
+}
+
+function normalizeLocalUpload(s) {
+    const song = normalizeApiSong({
+        ...s,
+        audioUrl: s.audioUrl,
+        uploaderUid: s.uploaderUid,
+        uploaderName: s.uploaderName,
+    });
+    return song;
+}
+
+function userCollectionToPlaylist(col) {
+    const { color, color2 } = colorsFor(col.id || col.name);
+    return {
+        id: col.id,
+        name: col.name,
+        description: col.description || "",
+        type: col.type || "playlist",
+        owner: col.ownerName || "You",
+        color,
+        color2,
+        songIds: col.songIds || [],
+        parentId: col.parentId || null,
+        isUserCreated: true,
+    };
+}
+
+function podcastToPlaylist(pod, episodes) {
+    const { color, color2 } = colorsFor(pod.id || pod.title);
+    return {
+        id: `podcast:${pod.id}`,
+        podcastId: pod.id,
+        name: pod.title,
+        description: pod.description || "",
+        type: "podcast",
+        owner: pod.author || pod.ownerName || "Podcaster",
+        color,
+        color2,
+        songIds: (episodes || []).map((e) => `ep:${pod.id}:${e.id}`),
+        episodes: episodes || [],
+        isPodcast: true,
+    };
+}
+
+function episodeAsSong(ep, podcast) {
+    const { color, color2 } = colorsFor(ep.id || ep.title);
+    return {
+        id: `ep:${podcast.id}:${ep.id}`,
+        title: ep.title,
+        artist: podcast.author || podcast.title,
+        author: podcast.author || podcast.ownerName,
+        album: `${podcast.title} · Ep ${ep.episodeNumber || 1}`,
+        src: ep.audioUrl,
+        color,
+        color2,
+        isEpisode: true,
+        podcastId: podcast.id,
+        episodeId: ep.id,
     };
 }
 
@@ -486,22 +554,114 @@ function buildDynamicPlaylists(songs) {
     return playlists;
 }
 
-/** Load songs from the API (backend mode) or fall back to the bundled set. */
-async function bootstrapData() {
-    if (!window.Musicfly || !window.Musicfly.backendMode) {
-        return; // demo mode: keep bundled SONGS / PLAYLISTS
+function mergePlaylists(basePlaylists, userCollections) {
+    const userPls = userCollections.map(userCollectionToPlaylist);
+    return [...userPls, ...basePlaylists];
+}
+
+/** Fetch library API — public for visitors, authed for logged-in users. */
+function libraryFetch(path) {
+    const base = window.Musicfly?.apiBase || "";
+    if (window.Musicfly?.isVisitor || !window.Musicfly?.currentUser) {
+        return fetch(base + path);
     }
-    try {
-        const res = await window.Musicfly.authedFetch("/api/songs");
-        if (!res.ok) throw new Error(`API returned ${res.status}`);
-        const data = await res.json();
-        SONGS = (data.songs || []).map(normalizeApiSong);
-        PLAYLISTS = buildDynamicPlaylists(SONGS);
-    } catch (err) {
-        console.error("Could not load songs from API:", err);
-        SONGS = [];
-        PLAYLISTS = buildDynamicPlaylists(SONGS);
-        showPlaybackError("Could not load the library from the server. Try refreshing.");
+    return window.Musicfly.authedFetch(path);
+}
+
+/** Load songs, playlists, and podcasts from API or local store. */
+async function bootstrapData() {
+    const user = window.Musicfly?.currentUser;
+    const isVisitor = window.Musicfly?.isVisitor;
+
+    if (window.Musicfly?.backendMode) {
+        try {
+            const [songsRes, plRes, podRes] = await Promise.all([
+                libraryFetch("/api/songs"),
+                user ? window.Musicfly.authedFetch("/api/playlists") : Promise.resolve(null),
+                libraryFetch("/api/podcasts"),
+            ]);
+            if (!songsRes.ok) throw new Error(`API returned ${songsRes.status}`);
+            const songsData = await songsRes.json();
+            SONGS = (songsData.songs || []).map(normalizeApiSong);
+
+            USER_COLLECTIONS = [];
+            if (plRes?.ok) {
+                const plData = await plRes.json();
+                USER_COLLECTIONS = plData.playlists || [];
+            }
+
+            PODCASTS = [];
+            if (podRes?.ok) {
+                const podData = await podRes.json();
+                PODCASTS = podData.podcasts || [];
+            }
+
+            const episodeSongs = [];
+            for (const pod of PODCASTS) {
+                try {
+                    const res = await libraryFetch(`/api/podcasts/${pod.id}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        pod._episodes = data.episodes || [];
+                        pod._episodes.forEach((ep) => episodeSongs.push(episodeAsSong(ep, pod)));
+                    }
+                } catch {}
+            }
+            SONGS = [...SONGS, ...episodeSongs];
+
+            const base = buildDynamicPlaylists(SONGS.filter((s) => !s.isEpisode));
+            PLAYLISTS = mergePlaylists(base, USER_COLLECTIONS);
+            PODCASTS.forEach((pod) => {
+                PLAYLISTS.push(podcastToPlaylist(pod, pod._episodes || []));
+            });
+        } catch (err) {
+            console.error("Could not load songs from API:", err);
+            SONGS = [];
+            PLAYLISTS = buildDynamicPlaylists(SONGS);
+            showPlaybackError("Could not load the library from the server. Try refreshing.");
+        }
+        return;
+    }
+
+    // Visitor in local demo mode: bundled library only
+    if (isVisitor) {
+        SONGS = BUNDLED_SONGS.map((s) => ({ ...s, src: resolveSrc(s.src) }));
+        PLAYLISTS = BUNDLED_PLAYLISTS.map((pl) => ({ ...pl }));
+        USER_COLLECTIONS = [];
+        PODCASTS = [];
+        return;
+    }
+
+    // Demo mode with logged-in user: merge bundled library + local uploads
+    if (user && window.MusicflyLocal) {
+        const uploads = await window.MusicflyLocal.listUploads();
+        const uploadSongs = uploads.map(normalizeLocalUpload);
+        SONGS = [...BUNDLED_SONGS.map((s) => ({ ...s, src: resolveSrc(s.src) })), ...uploadSongs];
+
+        USER_COLLECTIONS = window.MusicflyLocal.listPlaylists(user.uid);
+        PODCASTS = window.MusicflyLocal.listPodcasts();
+
+        const episodeSongs = [];
+        for (const pod of PODCASTS) {
+            const data = await window.MusicflyLocal.getPodcast(pod.id);
+            if (data) {
+                pod._episodes = data.episodes;
+                data.episodes.forEach((ep) => episodeSongs.push(episodeAsSong(ep, pod)));
+            }
+        }
+        SONGS = [...SONGS, ...episodeSongs];
+
+        PLAYLISTS = mergePlaylists(
+            BUNDLED_PLAYLISTS.map((pl) => ({ ...pl })),
+            USER_COLLECTIONS
+        );
+        // Fix all-songs playlist in demo
+        const allPl = PLAYLISTS.find((p) => p.id === "all");
+        if (allPl) allPl.songIds = SONGS.filter((s) => !s.isEpisode).map((s) => s.id);
+
+        PODCASTS.forEach((pod) => {
+            PLAYLISTS.push(podcastToPlaylist(pod, pod._episodes || []));
+        });
     }
 }
 
@@ -539,16 +699,26 @@ function getAudio() {
 function renderLibrary() {
     const list = $("#library-list");
     list.innerHTML = "";
-    PLAYLISTS.forEach((pl) => {
+
+    const items = PLAYLISTS.filter((pl) => {
+        if (libraryFilter === "playlists") return pl.type === "playlist" || pl.type === "folder";
+        if (libraryFilter === "artists") return pl.id.startsWith("artist:");
+        if (libraryFilter === "podcasts") return pl.type === "podcast";
+        return true;
+    });
+
+    items.forEach((pl) => {
         const li = document.createElement("li");
         li.className = "library-item";
         li.dataset.playlistId = pl.id;
         if (state.currentPlaylistId === pl.id) li.classList.add("active");
+        const typeLabel =
+            pl.type === "folder" ? "Folder" : pl.type === "podcast" ? "Podcast" : "Playlist";
         li.innerHTML = `
             <div class="library-art" style="background:${gradient(pl.color, pl.color2)}">${initials(pl.name)}</div>
             <div class="library-meta">
                 <div class="lib-title">${pl.name}</div>
-                <div class="lib-sub">Playlist · ${pl.owner}</div>
+                <div class="lib-sub">${typeLabel} · ${pl.owner}</div>
             </div>
         `;
         li.addEventListener("click", () => openPlaylist(pl.id));
@@ -654,7 +824,7 @@ function renderPlaylistView(playlistId) {
             <div class="type">${pl.type}</div>
             <h1>${pl.name}</h1>
             <div class="info">
-                <strong>${pl.owner}</strong> · ${pl.description} · <strong>${pl.songIds.length}</strong> songs
+                <strong>${pl.owner}</strong> · ${pl.description} · <strong>${pl.songIds.length}</strong> ${pl.type === "podcast" ? "episodes" : "songs"}
             </div>
         </div>
     `;
@@ -689,7 +859,7 @@ function renderPlaylistView(playlistId) {
                 <div class="row-art" style="background:${gradient(song.color, song.color2)}">${initials(song.title)}</div>
                 <div class="cell-title-text">
                     <div class="t-name">${song.title}</div>
-                    <div class="t-artist">${song.artist}</div>
+                    <div class="t-artist">${song.artist}${song.author && song.author !== song.artist ? ` · by ${song.author}` : ""}</div>
                 </div>
             </div>
             <div class="cell-album">${song.album}</div>
@@ -1214,16 +1384,19 @@ function init() {
         }
     });
 
-    // ----- Library chips (visual filter only) -----
+    // ----- Library chips -----
     $$(".chip").forEach((c) => {
         c.addEventListener("click", () => {
             $$(".chip").forEach((x) => x.classList.remove("active"));
             c.classList.add("active");
+            libraryFilter = c.dataset.filter || "all";
+            renderLibrary();
         });
     });
 
     wireAccountUI();
     wireUploadUI();
+    wireCreateUI();
 
     // Show home initially
     switchView("home");
@@ -1234,18 +1407,45 @@ function init() {
 // ====================================================
 function updateAccountUI() {
     const user = window.Musicfly?.currentUser;
+    const isVisitor = window.Musicfly?.isVisitor;
     const avatar = $("#avatar-btn");
     const uploadBtn = $("#upload-btn");
+    const createBtn = $("#create-btn");
     const dropName = $("#user-dropdown-name");
+    const loginBtn = $("#login-btn");
+    const logoutBtn = $("#logout-btn");
+    const logoutMenuBtn = $("#logout-menu-btn");
+    const sidebarCreate = $("#create-playlist-btn");
 
-    if (window.Musicfly?.backendMode && user) {
+    if (user) {
         const label = user.name || user.email || "You";
         if (avatar) avatar.textContent = (label[0] || "U").toUpperCase();
         if (dropName) dropName.textContent = label;
+        // Any signed-in account can upload music.
         uploadBtn?.classList.remove("hidden");
+        createBtn?.classList.toggle("hidden", !window.Musicfly?.canUpload);
+        sidebarCreate?.classList.toggle("hidden", !window.Musicfly?.canUpload);
+        loginBtn?.classList.add("hidden");
+        logoutBtn?.classList.remove("hidden");
+        logoutMenuBtn?.classList.remove("hidden");
+    } else if (isVisitor) {
+        if (avatar) avatar.textContent = "V";
+        if (dropName) dropName.textContent = "Visitor";
+        // Keep Upload visible so visitors can discover the feature (opens login).
+        uploadBtn?.classList.remove("hidden");
+        createBtn?.classList.add("hidden");
+        sidebarCreate?.classList.add("hidden");
+        loginBtn?.classList.remove("hidden");
+        logoutBtn?.classList.remove("hidden");
+        logoutMenuBtn?.classList.remove("hidden");
     } else {
         if (avatar) avatar.textContent = "T";
-        uploadBtn?.classList.add("hidden");
+        uploadBtn?.classList.remove("hidden");
+        createBtn?.classList.add("hidden");
+        sidebarCreate?.classList.add("hidden");
+        loginBtn?.classList.add("hidden");
+        logoutBtn?.classList.add("hidden");
+        logoutMenuBtn?.classList.add("hidden");
     }
 }
 
@@ -1253,19 +1453,32 @@ function wireAccountUI() {
     const avatar = $("#avatar-btn");
     const dropdown = $("#user-dropdown");
     const logout = $("#logout-btn");
+    const logoutMenu = $("#logout-menu-btn");
+    const login = $("#login-btn");
+
+    function doLogout() {
+        dropdown?.classList.add("hidden");
+        window.Musicfly?.signOut();
+    }
 
     avatar?.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (!window.Musicfly?.backendMode) return;
+        if (!window.Musicfly?.currentUser && !window.Musicfly?.isVisitor) {
+            window.Musicfly?.showLogin?.();
+            return;
+        }
         dropdown?.classList.toggle("hidden");
     });
 
     document.addEventListener("click", () => dropdown?.classList.add("hidden"));
 
-    logout?.addEventListener("click", () => {
+    login?.addEventListener("click", () => {
         dropdown?.classList.add("hidden");
-        window.Musicfly?.signOut();
+        window.Musicfly?.showLogin();
     });
+
+    logout?.addEventListener("click", doLogout);
+    logoutMenu?.addEventListener("click", doLogout);
 }
 
 // ====================================================
@@ -1284,6 +1497,10 @@ function wireUploadUI() {
     const submit = $("#upload-submit");
 
     const open = () => {
+        if (!window.Musicfly?.currentUser || window.Musicfly?.isVisitor) {
+            window.Musicfly?.showLogin?.();
+            return;
+        }
         modal?.classList.remove("hidden");
         showUploadError("");
     };
@@ -1302,6 +1519,7 @@ function wireUploadUI() {
     }
 
     openBtn?.addEventListener("click", open);
+    document.getElementById("home-upload-cta")?.addEventListener("click", open);
     closeBtn?.addEventListener("click", close);
     modal?.addEventListener("click", (e) => {
         if (e.target === modal) close();
@@ -1319,34 +1537,53 @@ function wireUploadUI() {
         const file = fileInput.files?.[0];
         const title = $("#upload-title").value.trim();
         const artist = $("#upload-artist").value.trim();
+        const author = ($("#upload-author").value.trim() || window.Musicfly.currentUser?.name || artist);
         const album = $("#upload-album").value.trim();
 
         if (!file) return showUploadError("Please choose an audio file.");
         if (file.size > 32 * 1024 * 1024) return showUploadError("File is larger than 32 MB.");
         if (!title || !artist) return showUploadError("Title and artist are required.");
-
-        const token = await window.Musicfly.getToken();
-        if (!token) return showUploadError("You must be logged in to upload.");
-
-        const fd = new FormData();
-        fd.append("audio", file);
-        fd.append("title", title);
-        fd.append("artist", artist);
-        fd.append("album", album);
+        if (!window.Musicfly?.currentUser || window.Musicfly?.isVisitor) {
+            return showUploadError("Log in to upload music.");
+        }
 
         submit.disabled = true;
         submit.textContent = "Uploading…";
         progress?.classList.remove("hidden");
 
         try {
-            await uploadWithProgress(
-                (window.Musicfly.apiBase || "") + "/api/songs",
-                fd,
-                token,
-                (pct) => {
-                    if (progressFill) progressFill.style.width = `${pct}%`;
-                }
-            );
+            if (window.Musicfly.backendMode) {
+                const token = await window.Musicfly.getToken();
+                if (!token) return showUploadError("You must be logged in to upload.");
+
+                const fd = new FormData();
+                fd.append("audio", file);
+                fd.append("title", title);
+                fd.append("artist", artist);
+                fd.append("author", author);
+                fd.append("album", album);
+
+                await uploadWithProgress(
+                    (window.Musicfly.apiBase || "") + "/api/songs",
+                    fd,
+                    token,
+                    (pct) => {
+                        if (progressFill) progressFill.style.width = `${pct}%`;
+                    }
+                );
+            } else {
+                const user = window.Musicfly.currentUser;
+                await window.MusicflyLocal.addUpload({
+                    title,
+                    artist,
+                    author,
+                    album,
+                    uploaderUid: user.uid,
+                    uploaderName: user.name,
+                    file,
+                });
+                if (progressFill) progressFill.style.width = "100%";
+            }
             close();
             await bootstrapData();
             renderLibrary();
@@ -1391,12 +1628,259 @@ function uploadWithProgress(url, formData, token, onProgress) {
 }
 
 // ====================================================
+// CREATE UI (playlists, folders, podcasts)
+// ====================================================
+function requireCanUpload() {
+    if (window.Musicfly?.isVisitor || !window.Musicfly?.currentUser) {
+        window.Musicfly?.showLogin?.();
+        alert("Log in to upload music or create content.");
+        return false;
+    }
+    if (!window.Musicfly?.canUpload) {
+        alert("Log in to upload music or create content.");
+        return false;
+    }
+    return true;
+}
+
+function wireCreateUI() {
+    const menuModal = $("#create-menu-modal");
+    const openMenu = () => {
+        if (!requireCanUpload()) return;
+        menuModal?.classList.remove("hidden");
+    };
+    const closeMenu = () => menuModal?.classList.add("hidden");
+
+    $("#create-btn")?.addEventListener("click", openMenu);
+    $("#create-playlist-btn")?.addEventListener("click", openMenu);
+    $("#create-menu-close")?.addEventListener("click", closeMenu);
+    menuModal?.addEventListener("click", (e) => {
+        if (e.target === menuModal) closeMenu();
+    });
+
+    $$(".create-menu-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            closeMenu();
+            const kind = btn.dataset.create;
+            if (kind === "playlist") openCollectionModal("playlist");
+            else if (kind === "folder") openCollectionModal("folder");
+            else if (kind === "podcast") openPodcastModal();
+            else if (kind === "episode") openEpisodeModal();
+        });
+    });
+
+    // Collection (playlist / folder)
+    const collModal = $("#create-collection-modal");
+    const collForm = $("#create-collection-form");
+    const closeColl = () => {
+        collModal?.classList.add("hidden");
+        collForm?.reset();
+        hideFormError("create-collection-error");
+    };
+    $("#create-collection-close")?.addEventListener("click", closeColl);
+    collModal?.addEventListener("click", (e) => {
+        if (e.target === collModal) closeColl();
+    });
+
+    collForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!requireCanUpload()) return;
+        const name = $("#create-collection-name").value.trim();
+        const description = $("#create-collection-desc").value.trim();
+        const type = $("#create-collection-type").value;
+        const user = window.Musicfly.currentUser;
+        hideFormError("create-collection-error");
+        try {
+            if (window.Musicfly.backendMode) {
+                const res = await window.Musicfly.authedFetch("/api/playlists", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, description, type }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Could not create.");
+            } else {
+                window.MusicflyLocal.createPlaylist({
+                    name,
+                    description,
+                    type,
+                    ownerUid: user.uid,
+                    ownerName: user.name,
+                });
+            }
+            closeColl();
+            await bootstrapData();
+            renderLibrary();
+            renderHome();
+        } catch (err) {
+            showFormError("create-collection-error", err.message);
+        }
+    });
+
+    // Podcast
+    const podModal = $("#create-podcast-modal");
+    const podForm = $("#create-podcast-form");
+    const closePod = () => {
+        podModal?.classList.add("hidden");
+        podForm?.reset();
+        hideFormError("create-podcast-error");
+    };
+    $("#create-podcast-close")?.addEventListener("click", closePod);
+    podModal?.addEventListener("click", (e) => {
+        if (e.target === podModal) closePod();
+    });
+
+    podForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!requireCanUpload()) return;
+        const title = $("#create-podcast-title").value.trim();
+        const author = ($("#create-podcast-author").value.trim() || window.Musicfly.currentUser?.name);
+        const description = $("#create-podcast-desc").value.trim();
+        const user = window.Musicfly.currentUser;
+        hideFormError("create-podcast-error");
+        try {
+            if (window.Musicfly.backendMode) {
+                const res = await window.Musicfly.authedFetch("/api/podcasts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, author, description }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Could not create podcast.");
+            } else {
+                window.MusicflyLocal.createPodcast({
+                    title,
+                    author,
+                    description,
+                    ownerUid: user.uid,
+                    ownerName: user.name,
+                });
+            }
+            closePod();
+            await bootstrapData();
+            renderLibrary();
+            renderHome();
+        } catch (err) {
+            showFormError("create-podcast-error", err.message);
+        }
+    });
+
+    // Episode upload
+    const epModal = $("#episode-modal");
+    const epForm = $("#episode-form");
+    const epFile = $("#episode-file");
+    const closeEp = () => {
+        epModal?.classList.add("hidden");
+        epForm?.reset();
+        hideFormError("episode-error");
+        if ($("#episode-file-text")) $("#episode-file-text").textContent = "Choose episode audio (max 32 MB)";
+    };
+    $("#episode-close")?.addEventListener("click", closeEp);
+    epModal?.addEventListener("click", (e) => {
+        if (e.target === epModal) closeEp();
+    });
+
+    epFile?.addEventListener("change", () => {
+        const f = epFile.files?.[0];
+        if (f && $("#episode-file-text")) $("#episode-file-text").textContent = f.name;
+    });
+
+    epForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!requireCanUpload()) return;
+        const podcastId = $("#episode-podcast").value;
+        const file = epFile.files?.[0];
+        const title = $("#episode-title").value.trim();
+        const episodeNumber = $("#episode-number").value || 1;
+        const description = $("#episode-desc").value.trim();
+        hideFormError("episode-error");
+        if (!podcastId) return showFormError("episode-error", "Choose a podcast.");
+        if (!file) return showFormError("episode-error", "Choose an audio file.");
+        if (file.size > 32 * 1024 * 1024) return showFormError("episode-error", "File is larger than 32 MB.");
+
+        const submit = $("#episode-submit");
+        submit.disabled = true;
+        try {
+            if (window.Musicfly.backendMode) {
+                const token = await window.Musicfly.getToken();
+                const fd = new FormData();
+                fd.append("audio", file);
+                fd.append("title", title);
+                fd.append("episodeNumber", episodeNumber);
+                fd.append("description", description);
+                await uploadWithProgress(
+                    `${window.Musicfly.apiBase || ""}/api/podcasts/${podcastId}/episodes`,
+                    fd,
+                    token,
+                    () => {}
+                );
+            } else {
+                await window.MusicflyLocal.addEpisode(podcastId, window.Musicfly.currentUser.uid, {
+                    title,
+                    episodeNumber,
+                    description,
+                    file,
+                });
+            }
+            closeEp();
+            await bootstrapData();
+            renderLibrary();
+            renderHome();
+        } catch (err) {
+            showFormError("episode-error", err.message);
+        } finally {
+            submit.disabled = false;
+        }
+    });
+}
+
+function openCollectionModal(type) {
+    if (!requireCanUpload()) return;
+    $("#create-collection-type").value = type;
+    $("#create-collection-title").textContent = type === "folder" ? "New folder" : "New playlist";
+    $("#create-collection-modal")?.classList.remove("hidden");
+}
+
+function openPodcastModal() {
+    if (!requireCanUpload()) return;
+    const authorInput = $("#create-podcast-author");
+    if (authorInput && !authorInput.value) {
+        authorInput.placeholder = window.Musicfly.currentUser?.name || "Your name";
+    }
+    $("#create-podcast-modal")?.classList.remove("hidden");
+}
+
+function openEpisodeModal() {
+    if (!requireCanUpload()) return;
+    const select = $("#episode-podcast");
+    if (!select) return;
+    const myUid = window.Musicfly.currentUser?.uid;
+    const mine = PODCASTS.filter((p) => p.ownerUid === myUid);
+    select.innerHTML = mine.length
+        ? mine.map((p) => `<option value="${p.id}">${p.title}</option>`).join("")
+        : `<option value="">Create a podcast first</option>`;
+    $("#episode-modal")?.classList.remove("hidden");
+}
+
+function showFormError(id, msg) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    box.textContent = msg;
+    box.classList.toggle("hidden", !msg);
+}
+
+function hideFormError(id) {
+    showFormError(id, "");
+}
+
+// ====================================================
 // APP ENTRY (controlled by auth.js)
 // ====================================================
 let appWired = false;
 
 window.MusicflyApp = {
     async start() {
+        await window.Musicfly?.refreshProfile();
         await bootstrapData();
         if (!appWired) {
             init();
@@ -1409,6 +1893,7 @@ window.MusicflyApp = {
         updateAccountUI();
     },
     async onUserChanged() {
+        await window.Musicfly?.refreshProfile();
         await bootstrapData();
         renderLibrary();
         renderHome();
@@ -1423,5 +1908,6 @@ window.MusicflyApp = {
         state.isPlaying = false;
         state.queue = [];
         state.currentIndex = -1;
+        updateAccountUI();
     },
 };

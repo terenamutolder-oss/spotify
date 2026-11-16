@@ -46,6 +46,7 @@
                 <div class="library-chips">
                     <button class="chip active" data-filter="all">All</button>
                     <button class="chip" data-filter="playlists">Playlists</button>
+                    <button class="chip" data-filter="podcasts">Podcasts</button>
                     <button class="chip" data-filter="artists">Artists</button>
                 </div>
 
@@ -77,11 +78,19 @@
                         <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1 14.5a.75.75 0 0 0 .75.75h12.5a.75.75 0 0 0 0-1.5H1.75a.75.75 0 0 0-.75.75zM8 1a.75.75 0 0 1 .53.22l3.5 3.5a.75.75 0 0 1-1.06 1.06L8.75 3.56V11.5a.75.75 0 0 1-1.5 0V3.56L5.03 5.78a.75.75 0 0 1-1.06-1.06l3.5-3.5A.75.75 0 0 1 8 1z"/></svg>
                         <span>Upload</span>
                     </button>
+                    <button class="pill-btn create-pill hidden" id="create-btn" title="Create playlist, folder, or podcast">
+                        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M15.25 8a.75.75 0 0 1-.75.75H8.75v5.75a.75.75 0 0 1-1.5 0V8.75H1.5a.75.75 0 0 1 0-1.5h5.75V1.5a.75.75 0 0 1 1.5 0v5.75h5.75a.75.75 0 0 1 .75.75z"/></svg>
+                        <span>Create</span>
+                    </button>
+                    <button type="button" class="pill-btn logout-pill hidden" id="logout-btn" title="Log out">
+                        <span>Log out</span>
+                    </button>
                     <div class="user-menu">
                         <button class="avatar" id="avatar-btn" title="Account">T</button>
                         <div class="user-dropdown hidden" id="user-dropdown">
                             <div class="user-dropdown-name" id="user-dropdown-name">Account</div>
-                            <button type="button" id="logout-btn">Log out</button>
+                            <button type="button" id="login-btn" class="hidden">Log in</button>
+                            <button type="button" id="logout-menu-btn">Log out</button>
                         </div>
                     </div>
                 </div>
@@ -96,6 +105,19 @@
                             <!-- Populated by JS -->
                         </div>
                     </div>
+
+                    <section class="row upload-promo" id="upload-promo">
+                        <div class="upload-promo-card">
+                            <div>
+                                <h2>Upload your music</h2>
+                                <p>Publish MP3s to the shared Musicfly library. Sign in, then hit Upload.</p>
+                            </div>
+                            <button type="button" class="pill-btn upload-pill" id="home-upload-cta">
+                                <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1 14.5a.75.75 0 0 0 .75.75h12.5a.75.75 0 0 0 0-1.5H1.75a.75.75 0 0 0-.75.75zM8 1a.75.75 0 0 1 .53.22l3.5 3.5a.75.75 0 0 1-1.06 1.06L8.75 3.56V11.5a.75.75 0 0 1-1.5 0V3.56L5.03 5.78a.75.75 0 0 1-1.06-1.06l3.5-3.5A.75.75 0 0 1 8 1z"/></svg>
+                                <span>Upload music</span>
+                            </button>
+                        </div>
+                    </section>
 
                     <section class="row">
                         <div class="row-header">
@@ -230,6 +252,9 @@
                 <label>Artist
                     <input type="text" id="upload-artist" required placeholder="Artist name" />
                 </label>
+                <label>Author <span class="optional">(who wrote/owns this track)</span>
+                    <input type="text" id="upload-author" placeholder="Defaults to your name" />
+                </label>
                 <label>Album <span class="optional">(optional)</span>
                     <input type="text" id="upload-album" placeholder="Album or single" />
                 </label>
@@ -242,10 +267,109 @@
         </div>
     </div>
 
+    <!-- ============ CREATE MENU ============ -->
+    <div class="modal-overlay hidden" id="create-menu-modal">
+        <div class="modal modal-sm">
+            <div class="modal-header">
+                <h2>Create</h2>
+                <button type="button" class="modal-close" id="create-menu-close" title="Close">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M2.47 2.47a.75.75 0 0 1 1.06 0L8 6.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L9.06 8l4.47 4.47a.75.75 0 1 1-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 0 1 0-1.06z"/></svg>
+                </button>
+            </div>
+            <div class="create-menu">
+                <button type="button" class="create-menu-item" data-create="playlist">New playlist</button>
+                <button type="button" class="create-menu-item" data-create="folder">New folder</button>
+                <button type="button" class="create-menu-item" data-create="podcast">New podcast</button>
+                <button type="button" class="create-menu-item" data-create="episode">Upload podcast episode</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ CREATE PLAYLIST / FOLDER ============ -->
+    <div class="modal-overlay hidden" id="create-collection-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="create-collection-title">New playlist</h2>
+                <button type="button" class="modal-close" id="create-collection-close" title="Close">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M2.47 2.47a.75.75 0 0 1 1.06 0L8 6.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L9.06 8l4.47 4.47a.75.75 0 1 1-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 0 1 0-1.06z"/></svg>
+                </button>
+            </div>
+            <form id="create-collection-form" class="upload-form">
+                <input type="hidden" id="create-collection-type" value="playlist" />
+                <label>Name
+                    <input type="text" id="create-collection-name" required placeholder="My playlist" />
+                </label>
+                <label>Description <span class="optional">(optional)</span>
+                    <input type="text" id="create-collection-desc" placeholder="A short description" />
+                </label>
+                <div class="upload-error hidden" id="create-collection-error"></div>
+                <button type="submit" class="auth-submit">Create</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ CREATE PODCAST ============ -->
+    <div class="modal-overlay hidden" id="create-podcast-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>New podcast</h2>
+                <button type="button" class="modal-close" id="create-podcast-close" title="Close">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M2.47 2.47a.75.75 0 0 1 1.06 0L8 6.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L9.06 8l4.47 4.47a.75.75 0 1 1-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 0 1 0-1.06z"/></svg>
+                </button>
+            </div>
+            <form id="create-podcast-form" class="upload-form">
+                <label>Podcast title
+                    <input type="text" id="create-podcast-title" required placeholder="My Podcast" />
+                </label>
+                <label>Author / host
+                    <input type="text" id="create-podcast-author" placeholder="Your name" />
+                </label>
+                <label>Description <span class="optional">(optional)</span>
+                    <input type="text" id="create-podcast-desc" placeholder="What is this show about?" />
+                </label>
+                <div class="upload-error hidden" id="create-podcast-error"></div>
+                <button type="submit" class="auth-submit">Create podcast</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ UPLOAD PODCAST EPISODE ============ -->
+    <div class="modal-overlay hidden" id="episode-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Upload episode</h2>
+                <button type="button" class="modal-close" id="episode-close" title="Close">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M2.47 2.47a.75.75 0 0 1 1.06 0L8 6.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L9.06 8l4.47 4.47a.75.75 0 1 1-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 0 1 0-1.06z"/></svg>
+                </button>
+            </div>
+            <form id="episode-form" class="upload-form">
+                <label>Podcast
+                    <select id="episode-podcast" required></select>
+                </label>
+                <label class="file-drop" id="episode-file-drop">
+                    <input type="file" id="episode-file" accept="audio/*" hidden />
+                    <span id="episode-file-text">Choose episode audio (max 32 MB)</span>
+                </label>
+                <label>Episode title
+                    <input type="text" id="episode-title" required placeholder="Episode title" />
+                </label>
+                <label>Episode number
+                    <input type="number" id="episode-number" min="1" value="1" />
+                </label>
+                <label>Description <span class="optional">(optional)</span>
+                    <input type="text" id="episode-desc" placeholder="Show notes" />
+                </label>
+                <div class="upload-error hidden" id="episode-error"></div>
+                <button type="submit" class="auth-submit" id="episode-submit">Upload episode</button>
+            </form>
+        </div>
+    </div>
+
     <div class="playback-toast hidden" id="playback-toast" role="alert"></div>
     <audio id="audio" preload="auto" playsinline></audio>
 
     <!-- Firebase (compat) -->
+    <script src="local-store.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
