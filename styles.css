@@ -1372,6 +1372,21 @@ body.auth-locked {
     gap: 8px;
 }
 
+.logout-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: var(--text-primary);
+}
+
+.logout-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.55);
+    transform: scale(1.02);
+}
+
 .user-menu {
     position: relative;
 }

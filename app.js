@@ -1414,6 +1414,7 @@ function updateAccountUI() {
     const dropName = $("#user-dropdown-name");
     const loginBtn = $("#login-btn");
     const logoutBtn = $("#logout-btn");
+    const logoutMenuBtn = $("#logout-menu-btn");
     const sidebarCreate = $("#create-playlist-btn");
 
     if (user) {
@@ -1426,6 +1427,7 @@ function updateAccountUI() {
         sidebarCreate?.classList.toggle("hidden", !window.Musicfly?.canUpload);
         loginBtn?.classList.add("hidden");
         logoutBtn?.classList.remove("hidden");
+        logoutMenuBtn?.classList.remove("hidden");
     } else if (isVisitor) {
         if (avatar) avatar.textContent = "V";
         if (dropName) dropName.textContent = "Visitor";
@@ -1435,13 +1437,15 @@ function updateAccountUI() {
         sidebarCreate?.classList.add("hidden");
         loginBtn?.classList.remove("hidden");
         logoutBtn?.classList.remove("hidden");
+        logoutMenuBtn?.classList.remove("hidden");
     } else {
         if (avatar) avatar.textContent = "T";
         uploadBtn?.classList.remove("hidden");
         createBtn?.classList.add("hidden");
         sidebarCreate?.classList.add("hidden");
         loginBtn?.classList.add("hidden");
-        logoutBtn?.classList.remove("hidden");
+        logoutBtn?.classList.add("hidden");
+        logoutMenuBtn?.classList.add("hidden");
     }
 }
 
@@ -1449,11 +1453,20 @@ function wireAccountUI() {
     const avatar = $("#avatar-btn");
     const dropdown = $("#user-dropdown");
     const logout = $("#logout-btn");
+    const logoutMenu = $("#logout-menu-btn");
     const login = $("#login-btn");
+
+    function doLogout() {
+        dropdown?.classList.add("hidden");
+        window.Musicfly?.signOut();
+    }
 
     avatar?.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (!window.Musicfly?.currentUser && !window.Musicfly?.isVisitor) return;
+        if (!window.Musicfly?.currentUser && !window.Musicfly?.isVisitor) {
+            window.Musicfly?.showLogin?.();
+            return;
+        }
         dropdown?.classList.toggle("hidden");
     });
 
@@ -1464,10 +1477,8 @@ function wireAccountUI() {
         window.Musicfly?.showLogin();
     });
 
-    logout?.addEventListener("click", () => {
-        dropdown?.classList.add("hidden");
-        window.Musicfly?.signOut();
-    });
+    logout?.addEventListener("click", doLogout);
+    logoutMenu?.addEventListener("click", doLogout);
 }
 
 // ====================================================

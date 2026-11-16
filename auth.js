@@ -37,16 +37,24 @@
             if (this.isVisitor) {
                 visitorMode = false;
                 this.isVisitor = false;
+                this.currentUser = null;
+                this.canUpload = false;
                 showOverlay();
                 window.MusicflyApp?.onSignedOut();
                 return;
             }
             if (this.backendMode && this._auth) {
-                this._auth.signOut();
+                this.currentUser = null;
+                this.canUpload = false;
+                this.isVisitor = false;
+                this._auth.signOut().catch(() => {});
+                showOverlay();
+                window.MusicflyApp?.onSignedOut();
             } else {
                 window.MusicflyLocal?.signOut();
                 this.currentUser = null;
                 this.canUpload = false;
+                this.isVisitor = false;
                 showOverlay();
                 window.MusicflyApp?.onSignedOut();
             }
